@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import importlib
 import json
 import random
 import string
@@ -56,6 +57,11 @@ RARE_PENALTY = 0.03
 CURRENCY_SYMBOLS = frozenset("$\u00a3\u20ac\u20b9")
 CURRENCY_PENALTY = 0.07
 ATLAS_VERSION = "8"
+CALIBRATION_SOURCES: tuple[str, ...] = (
+    "ledgerlens.pipeline.ocr.atlas",
+    "ledgerlens.pipeline.segment",
+    "ledgerlens.pipeline.preprocess",
+)
 DIGITS, UPPER, LOWER = set(string.digits), set(string.ascii_uppercase), set(string.ascii_lowercase)
 
 
@@ -197,7 +203,13 @@ def condense(vectors: np.ndarray, geos: np.ndarray, labels: np.ndarray) -> tuple
 
 
 def atlas_fingerprint() -> str:
-    """Identifies the atlas inputs so a stale cache is rebuilt automatically."""
+    """Identifies the atlas inputs so a stale cache is rebuilt automatically.
+
+    The character calibration is fitted by running the recogniser, segmenter and
+    preprocessor, so their source is part of the fingerprint alongside the fonts and
+    template parameters: any change to that code refits the calibration, and a fresh
+    clone and a long-lived checkout always use the same atlas.
+    """
     digest = hashlib.sha256()
     digest.update(ATLAS_VERSION.encode())
     digest.update(CHARSET.encode())
@@ -205,7 +217,9 @@ def atlas_fingerprint() -> str:
     digest.update(str(STROKE_VARIANTS).encode())
     for label, path in atlas_font_files():
         digest.update(label.encode())
-        digest.update(Path(path).read_bytes()[:4096])
+        digest.update(Path(path).read_bytes())
+    for module in CALIBRATION_SOURCES:
+        digest.update(Path(str(importlib.import_module(module).__file__)).read_bytes())
     return digest.hexdigest()[:16]
 
 
@@ -221,7 +235,7 @@ class AtlasOCR:
 
     @classmethod
     def load_or_build(cls, cache_dir: Path) -> AtlasOCR:
-        """Use the cached atlas when its fingerprint matches, otherwise render and calibrate."""
+        """Use the cached atlas when its fingerprint matches, otherwise render, calibrate and drop stale ones."""
         cache_dir.mkdir(parents=True, exist_ok=True)
         fingerprint = atlas_fingerprint()
         path = cache_dir / f"atlas-{fingerprint}.npz"
@@ -242,6 +256,9 @@ class AtlasOCR:
                 indent=2,
             )
         )
+        for stale in cache_dir.glob("atlas-*"):
+            if fingerprint not in stale.name:
+                stale.unlink()
         return engine
 
     def recognize(self, gray: np.ndarray, ink: np.ndarray) -> OCRPage:
