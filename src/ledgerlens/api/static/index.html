@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ledgerlens review</title>
+<style>
+  :root { --bg: #f6f7f9; --panel: #ffffff; --ink: #1d2330; --muted: #5d6675; --line: #d9dde3; --ok: #1b7f4b; --warn: #b35c00; --accent: #2456c7; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
+  header { padding: 16px 24px; background: var(--panel); border-bottom: 1px solid var(--line); display: flex; gap: 16px; align-items: baseline; }
+  header h1 { margin: 0; font-size: 18px; }
+  header span { color: var(--muted); }
+  main { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; padding: 16px 24px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  h2 { margin: 0 0 12px; font-size: 15px; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  input[type=text] { width: 100%; padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; font: inherit; }
+  button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+  button.secondary { background: var(--panel); color: var(--accent); }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  .decision { font-weight: 700; }
+  .accepted { color: var(--ok); }
+  .review { color: var(--warn); }
+  .muted { color: var(--muted); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+  .stat b { display: block; font-size: 22px; }
+  pre { white-space: pre-wrap; font-size: 12px; max-height: 240px; overflow: auto; background: var(--bg); padding: 8px; border-radius: 6px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header><h1>ledgerlens</h1><span>upload a page, read the extraction, clear the review queue</span></header>
+<main>
+  <section>
+    <h2>Process a document</h2>
+    <form id="upload">
+      <input type="file" name="file" accept="image/png,image/jpeg" required>
+      <input type="text" id="apikey" placeholder="X-API-Key (only if the server requires one)" style="margin:8px 0">
+      <button type="submit">Extract</button>
+    </form>
+    <div id="result" style="margin-top:12px"></div>
+  </section>
+  <section>
+    <h2>Review queue</h2>
+    <div class="stats" id="stats"></div>
+    <div id="queue" style="margin-top:12px"></div>
+  </section>
+</main>
+<script>
+const headers = () => { const k = document.getElementById('apikey').value.trim(); return k ? {'X-API-Key': k} : {}; };
+const pct = v => (100 * v).toFixed(1) + '%';
+function fieldRows(fields, editable) {
+  return fields.map(f => `<tr><td>${f.name}</td><td>${editable ? `<input type="text" data-field="${f.name}" value="${f.value ?? ''}">` : (f.value ?? '<span class="muted">none</span>')}</td><td style="width:90px"><div class="bar"><i style="width:${pct(f.confidence)}"></i></div><small class="muted">${pct(f.confidence)}</small></td></tr>`).join('');
+}
+function renderResult(doc) {
+  const r = doc.result;
+  const rules = r.rules.map(x => `<li>${x.name}: <b class="${x.passed === false ? 'review' : ''}">${x.passed === null ? 'n/a' : x.passed ? 'pass' : 'FAIL'}</b> <span class="muted">${x.detail}</span></li>`).join('');
+  document.getElementById('result').innerHTML = `
+    <p><b>${r.doc_type}</b> (${pct(r.doc_type_confidence)}) via ${r.ocr_engine}, ${r.latency_ms} ms, skew ${r.skew_deg} deg.
+    Decision: <span class="decision ${r.decision}">${r.decision.toUpperCase()}</span> at confidence ${pct(r.document_confidence)}. Stored as <code>${doc.id}</code>.</p>
+    <table><tr><th>Field</th><th>Value</th><th>Confidence</th></tr>${fieldRows(r.fields, false)}</table>
+    <p class="muted">${r.line_items.length} line items, ${r.transactions.length} transactions</p>
+    <ul>${rules}</ul><details><summary>OCR text</summary><pre>${r.page_text.replace(/</g, '&lt;')}</pre></details>`;
+}
+document.getElementById('upload').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const data = new FormData(ev.target);
+  document.getElementById('result').innerHTML = '<p class="muted">processing</p>';
+  const res = await fetch('/v1/documents', {method: 'POST', body: data, headers: headers()});
+  const body = await res.json();
+  if (!res.ok) { document.getElementById('result').innerHTML = `<p class="review">${body.detail}</p>`; return; }
+  renderResult(body); loadQueue();
+});
+async function loadQueue() {
+  const [q, s] = await Promise.all([fetch('/v1/queue?limit=10', {headers: headers()}), fetch('/v1/stats', {headers: headers()})]);
+  if (!q.ok || !s.ok) { document.getElementById('queue').innerHTML = '<p class="review">queue needs a valid API key</p>'; return; }
+  const queue = await q.json(), stats = await s.json();
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><b>${stats.documents}</b>documents</div>
+    <div class="stat"><b>${stats.accepted}</b>auto-accepted</div>
+    <div class="stat"><b>${stats.pending}</b>pending review</div>
+    <div class="stat"><b>${stats.reviewed}</b>reviewed</div>
+    <div class="stat"><b>${stats.fields_corrected}</b>fields corrected</div>
+    <div class="stat"><b>${pct(stats.effort_saved_fraction)}</b>effort saved</div>`;
+  document.getElementById('queue').innerHTML = queue.items.length ? queue.items.map(item => `
+    <details><summary><b>${item.doc_type}</b> ${item.filename ?? item.id} at ${pct(item.confidence)} ${item.failed_rules.length ? '<span class="review">failed: ' + item.failed_rules.join(', ') + '</span>' : ''}</summary>
+    <form data-id="${item.id}" class="reviewform"><table>${Object.entries(item.fields).map(([k, v]) => `<tr><td>${k}</td><td><input type="text" data-field="${k}" value="${v ?? ''}"></td></tr>`).join('')}</table>
+    <p><input type="text" name="reviewer" placeholder="reviewer" style="width:200px"> <button type="submit">Save corrections</button></p></form></details>`).join('') : '<p class="muted">queue is empty</p>';
+  document.querySelectorAll('.reviewform').forEach(form => form.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const fields = {}; form.querySelectorAll('input[data-field]').forEach(i => { fields[i.dataset.field] = i.value === '' ? null : i.value; });
+    const res = await fetch(`/v1/queue/${form.dataset.id}/review`, {method: 'POST', headers: {'Content-Type': 'application/json', ...headers()},
+      body: JSON.stringify({reviewer: form.querySelector('[name=reviewer]').value || null, fields})});
+    const body = await res.json();
+    alert(res.ok ? `saved: ${body.fields_corrected} corrected, ${body.fields_confirmed} confirmed` : body.detail);
+    loadQueue();
+  }));
+}
+loadQueue();
+</script>
+</body>
+</html>
