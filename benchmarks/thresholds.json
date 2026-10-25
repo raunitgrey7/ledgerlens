@@ -1,0 +1,10 @@
+{
+  "fields_micro_f1_min": 0.6,
+  "line_items_f1_min": 0.27,
+  "transactions_f1_min": 0.28,
+  "doc_type_accuracy_min": 0.93,
+  "cer_seen_max": 0.3,
+  "latency_p95_ms_max": 12000.0,
+  "acceptance_rate_min": 0.0,
+  "wrong_accepted_rate_max": 0.02
+}

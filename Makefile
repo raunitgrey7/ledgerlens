@@ -2,6 +2,7 @@
 
 UV ?= uv
 JOBS ?= 4
+PORT ?= 8000
 
 setup:
 	$(UV) sync --all-extras
@@ -27,7 +28,7 @@ bench-gate:
 	$(UV) run python -m ledgerlens.bench.readme
 
 serve:
-	$(UV) run ledgerlens serve --host 0.0.0.0 --port 8000
+	$(UV) run ledgerlens serve --host 0.0.0.0 --port $(PORT)
 
 docker-build:
 	docker build -t ledgerlens:latest .

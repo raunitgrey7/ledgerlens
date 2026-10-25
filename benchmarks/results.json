@@ -1,0 +1,935 @@
+{
+  "meta": {
+    "generated_at": "2026-10-25T04:15:25+00:00",
+    "ledgerlens_version": "0.1.0",
+    "git_commit": "65b006a",
+    "python": "3.13.17",
+    "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "ocr_engine": "atlas",
+    "jobs": 4,
+    "splits": {
+      "calibration": {
+        "size": 200,
+        "seed": 101,
+        "fingerprint": "99044aa6700ea2103c5bbec91707cf0e64a311f620dbe1bdb67d981afeab201f"
+      },
+      "test": {
+        "size": 400,
+        "seed": 303,
+        "fingerprint": "d991fd18b07429ee52f04de56b925fdcff14fbbb63e277e1324da2e43a90bf1a"
+      }
+    },
+    "seconds": {
+      "build_data": 0.1,
+      "evaluate": 270.5
+    }
+  },
+  "field_calibration": {
+    "currency": [
+      -0.27080053105823865,
+      1.7951284232284672
+    ],
+    "customer_name": [
+      0.15418467473988243,
+      0.48194253250148283
+    ],
+    "document_date": [
+      0.7275805896630606,
+      1.6480106623061481
+    ],
+    "document_number": [
+      1.9384943832509192,
+      0.4096864054834199
+    ],
+    "due_date": [
+      1.9833706410154799,
+      1.5575997160586306
+    ],
+    "opening_balance": [
+      1.5150415299106845,
+      0.4241038395036986
+    ],
+    "subtotal": [
+      2.221785490290981,
+      0.859012360001682
+    ],
+    "tax": [
+      0.7824066598553698,
+      1.0231540048998748
+    ],
+    "total": [
+      1.174902268343066,
+      1.2309019680758508
+    ],
+    "vendor_name": [
+      1.2242640426257976,
+      1.015506261480687
+    ]
+  },
+  "threshold": {
+    "value": 1.0,
+    "target_accepted_header_accuracy": 0.95,
+    "chosen_on": "calibration"
+  },
+  "calibration": {
+    "documents": 200,
+    "doc_type_accuracy": 0.975,
+    "fields": {
+      "micro": {
+        "precision": 0.8216,
+        "recall": 0.5343,
+        "f1": 0.6475,
+        "tp": 935,
+        "fp": 203,
+        "fn": 815
+      },
+      "per_field": {
+        "closing_balance": {
+          "precision": 1.0,
+          "recall": 0.5882,
+          "f1": 0.7407,
+          "tp": 20,
+          "fp": 0,
+          "fn": 14
+        },
+        "currency": {
+          "precision": 0.9931,
+          "recall": 0.72,
+          "f1": 0.8348,
+          "tp": 144,
+          "fp": 1,
+          "fn": 56
+        },
+        "customer_name": {
+          "precision": 0.4844,
+          "recall": 0.2331,
+          "f1": 0.3147,
+          "tp": 31,
+          "fp": 33,
+          "fn": 102
+        },
+        "document_date": {
+          "precision": 0.888,
+          "recall": 0.555,
+          "f1": 0.6831,
+          "tp": 111,
+          "fp": 14,
+          "fn": 89
+        },
+        "document_number": {
+          "precision": 0.8607,
+          "recall": 0.5676,
+          "f1": 0.684,
+          "tp": 105,
+          "fp": 17,
+          "fn": 80
+        },
+        "due_date": {
+          "precision": 0.9825,
+          "recall": 0.5657,
+          "f1": 0.7179,
+          "tp": 56,
+          "fp": 1,
+          "fn": 43
+        },
+        "gstin": {
+          "precision": 1.0,
+          "recall": 0.3684,
+          "f1": 0.5385,
+          "tp": 21,
+          "fp": 0,
+          "fn": 36
+        },
+        "iban": {
+          "precision": 1.0,
+          "recall": 0.4524,
+          "f1": 0.623,
+          "tp": 19,
+          "fp": 0,
+          "fn": 23
+        },
+        "opening_balance": {
+          "precision": 0.9,
+          "recall": 0.5294,
+          "f1": 0.6667,
+          "tp": 18,
+          "fp": 2,
+          "fn": 16
+        },
+        "period_end": {
+          "precision": 1.0,
+          "recall": 0.5882,
+          "f1": 0.7407,
+          "tp": 20,
+          "fp": 0,
+          "fn": 14
+        },
+        "period_start": {
+          "precision": 1.0,
+          "recall": 0.5882,
+          "f1": 0.7407,
+          "tp": 20,
+          "fp": 0,
+          "fn": 14
+        },
+        "subtotal": {
+          "precision": 0.9223,
+          "recall": 0.5723,
+          "f1": 0.7063,
+          "tp": 95,
+          "fp": 8,
+          "fn": 71
+        },
+        "tax": {
+          "precision": 0.8598,
+          "recall": 0.5542,
+          "f1": 0.674,
+          "tp": 92,
+          "fp": 15,
+          "fn": 74
+        },
+        "total": {
+          "precision": 0.8491,
+          "recall": 0.5422,
+          "f1": 0.6618,
+          "tp": 90,
+          "fp": 16,
+          "fn": 76
+        },
+        "vendor_name": {
+          "precision": 0.4921,
+          "recall": 0.465,
+          "f1": 0.4781,
+          "tp": 93,
+          "fp": 96,
+          "fn": 107
+        }
+      },
+      "per_template": {
+        "invoice_boxed": {
+          "precision": 0.8218,
+          "recall": 0.5685,
+          "f1": 0.6721,
+          "tp": 166,
+          "fp": 36,
+          "fn": 126,
+          "documents": 30,
+          "line_items_f1": 0.3436,
+          "transactions_f1": 0.0
+        },
+        "invoice_classic": {
+          "precision": 0.9074,
+          "recall": 0.6364,
+          "f1": 0.7481,
+          "tp": 98,
+          "fp": 10,
+          "fn": 56,
+          "documents": 16,
+          "line_items_f1": 0.4494,
+          "transactions_f1": 0.0
+        },
+        "invoice_letter": {
+          "precision": 0.8193,
+          "recall": 0.544,
+          "f1": 0.6538,
+          "tp": 68,
+          "fp": 15,
+          "fn": 57,
+          "documents": 13,
+          "line_items_f1": 0.3944,
+          "transactions_f1": 0.0
+        },
+        "invoice_modern": {
+          "precision": 0.7651,
+          "recall": 0.5089,
+          "f1": 0.6113,
+          "tp": 114,
+          "fp": 35,
+          "fn": 110,
+          "documents": 23,
+          "line_items_f1": 0.0531,
+          "transactions_f1": 0.0
+        },
+        "invoice_tax": {
+          "precision": 0.7111,
+          "recall": 0.3855,
+          "f1": 0.5,
+          "tp": 64,
+          "fp": 26,
+          "fn": 102,
+          "documents": 17,
+          "line_items_f1": 0.234,
+          "transactions_f1": 0.0
+        },
+        "receipt_cafe": {
+          "precision": 0.8544,
+          "recall": 0.5466,
+          "f1": 0.6667,
+          "tp": 88,
+          "fp": 15,
+          "fn": 73,
+          "documents": 23,
+          "line_items_f1": 0.3145,
+          "transactions_f1": 0.0
+        },
+        "receipt_retail": {
+          "precision": 0.7386,
+          "recall": 0.3736,
+          "f1": 0.4962,
+          "tp": 65,
+          "fp": 23,
+          "fn": 109,
+          "documents": 25,
+          "line_items_f1": 0.24,
+          "transactions_f1": 0.0
+        },
+        "receipt_thermal": {
+          "precision": 0.8558,
+          "recall": 0.6642,
+          "f1": 0.7479,
+          "tp": 89,
+          "fp": 15,
+          "fn": 45,
+          "documents": 19,
+          "line_items_f1": 0.5324,
+          "transactions_f1": 0.0
+        },
+        "statement_ledger": {
+          "precision": 0.8649,
+          "recall": 0.5161,
+          "f1": 0.6465,
+          "tp": 64,
+          "fp": 10,
+          "fn": 60,
+          "documents": 13,
+          "line_items_f1": 0.0,
+          "transactions_f1": 0.1667
+        },
+        "statement_ruled": {
+          "precision": 0.8686,
+          "recall": 0.6071,
+          "f1": 0.7147,
+          "tp": 119,
+          "fp": 18,
+          "fn": 77,
+          "documents": 21,
+          "line_items_f1": 0.0,
+          "transactions_f1": 0.2308
+        }
+      },
+      "per_severity": {
+        "clean": {
+          "precision": 0.9268,
+          "recall": 0.8553,
+          "f1": 0.8896,
+          "tp": 266,
+          "fp": 21,
+          "fn": 45,
+          "documents": 36,
+          "cer": 0.0391,
+          "record_accuracy": 0.2222
+        },
+        "heavy": {
+          "precision": 0.6374,
+          "recall": 0.2332,
+          "f1": 0.3415,
+          "tp": 174,
+          "fp": 99,
+          "fn": 572,
+          "documents": 86,
+          "cer": 0.5218,
+          "record_accuracy": 0.0
+        },
+        "light": {
+          "precision": 0.8564,
+          "recall": 0.7143,
+          "f1": 0.7789,
+          "tp": 495,
+          "fp": 83,
+          "fn": 198,
+          "documents": 78,
+          "cer": 0.1092,
+          "record_accuracy": 0.0256
+        }
+      },
+      "per_font": {
+        "unseen": {
+          "precision": 0.4273,
+          "recall": 0.1679,
+          "f1": 0.241,
+          "tp": 47,
+          "fp": 63,
+          "fn": 233,
+          "documents": 32,
+          "cer": 0.4273
+        },
+        "seen": {
+          "precision": 0.8638,
+          "recall": 0.6041,
+          "f1": 0.711,
+          "tp": 888,
+          "fp": 140,
+          "fn": 582,
+          "documents": 168,
+          "cer": 0.2357
+        }
+      }
+    },
+    "line_items": {
+      "precision": 0.4419,
+      "recall": 0.2496,
+      "f1": 0.319,
+      "tp": 156,
+      "fp": 197,
+      "fn": 469
+    },
+    "transactions": {
+      "precision": 0.3961,
+      "recall": 0.1393,
+      "f1": 0.2061,
+      "tp": 61,
+      "fp": 93,
+      "fn": 377
+    },
+    "line_items_relaxed": {
+      "precision": 0.6912,
+      "recall": 0.3904,
+      "f1": 0.499,
+      "tp": 244,
+      "fp": 109,
+      "fn": 381
+    },
+    "transactions_relaxed": {
+      "precision": 0.6753,
+      "recall": 0.2374,
+      "f1": 0.3514,
+      "tp": 104,
+      "fp": 50,
+      "fn": 334
+    },
+    "ocr_cer": {
+      "all": 0.2644,
+      "unseen": 0.4273,
+      "seen": 0.2357
+    },
+    "record_accuracy": 0.05,
+    "header_accuracy": 0.15,
+    "acceptance": {
+      "threshold": 1.0,
+      "accepted": 0,
+      "acceptance_rate": 0.0,
+      "accepted_record_accuracy": 0.0,
+      "accepted_header_accuracy": 0.0,
+      "wrong_accepted": 0,
+      "wrong_header_accepted": 0,
+      "review_rate": 1.0
+    },
+    "acceptance_curve": [
+      {
+        "threshold": 0.3,
+        "accepted": 26,
+        "acceptance_rate": 0.13,
+        "accepted_record_accuracy": 0.3846,
+        "accepted_header_accuracy": 0.8077,
+        "wrong_accepted": 16,
+        "wrong_header_accepted": 5,
+        "review_rate": 0.87
+      },
+      {
+        "threshold": 0.5,
+        "accepted": 19,
+        "acceptance_rate": 0.095,
+        "accepted_record_accuracy": 0.4211,
+        "accepted_header_accuracy": 0.8421,
+        "wrong_accepted": 11,
+        "wrong_header_accepted": 3,
+        "review_rate": 0.905
+      },
+      {
+        "threshold": 0.7,
+        "accepted": 6,
+        "acceptance_rate": 0.03,
+        "accepted_record_accuracy": 0.5,
+        "accepted_header_accuracy": 0.6667,
+        "wrong_accepted": 3,
+        "wrong_header_accepted": 2,
+        "review_rate": 0.97
+      },
+      {
+        "threshold": 0.8,
+        "accepted": 6,
+        "acceptance_rate": 0.03,
+        "accepted_record_accuracy": 0.5,
+        "accepted_header_accuracy": 0.6667,
+        "wrong_accepted": 3,
+        "wrong_header_accepted": 2,
+        "review_rate": 0.97
+      },
+      {
+        "threshold": 0.9,
+        "accepted": 1,
+        "acceptance_rate": 0.005,
+        "accepted_record_accuracy": 1.0,
+        "accepted_header_accuracy": 1.0,
+        "wrong_accepted": 0,
+        "wrong_header_accepted": 0,
+        "review_rate": 0.995
+      },
+      {
+        "threshold": 0.95,
+        "accepted": 0,
+        "acceptance_rate": 0.0,
+        "accepted_record_accuracy": 0.0,
+        "accepted_header_accuracy": 0.0,
+        "wrong_accepted": 0,
+        "wrong_header_accepted": 0,
+        "review_rate": 1.0
+      }
+    ],
+    "effort": {
+      "manual_cost": 1750.0,
+      "assisted_cost": 1002.0,
+      "effort_saved_fraction": 0.4274,
+      "verify_cost_per_field": 0.2,
+      "correct_cost_per_field": 1.0,
+      "manual_cost_per_field": 1.0
+    },
+    "latency_ms": {
+      "mean": 1390.1,
+      "p50": 1074.2,
+      "p95": 3527.5,
+      "max": 5322.8
+    }
+  },
+  "test": {
+    "documents": 400,
+    "doc_type_accuracy": 0.97,
+    "fields": {
+      "micro": {
+        "precision": 0.8191,
+        "recall": 0.5193,
+        "f1": 0.6356,
+        "tp": 1843,
+        "fp": 407,
+        "fn": 1706
+      },
+      "per_field": {
+        "closing_balance": {
+          "precision": 0.9737,
+          "recall": 0.4684,
+          "f1": 0.6325,
+          "tp": 37,
+          "fp": 1,
+          "fn": 42
+        },
+        "currency": {
+          "precision": 0.9931,
+          "recall": 0.7175,
+          "f1": 0.8331,
+          "tp": 287,
+          "fp": 2,
+          "fn": 113
+        },
+        "customer_name": {
+          "precision": 0.5802,
+          "recall": 0.2667,
+          "f1": 0.3654,
+          "tp": 76,
+          "fp": 55,
+          "fn": 209
+        },
+        "document_date": {
+          "precision": 0.9055,
+          "recall": 0.575,
+          "f1": 0.7034,
+          "tp": 230,
+          "fp": 24,
+          "fn": 170
+        },
+        "document_number": {
+          "precision": 0.791,
+          "recall": 0.5188,
+          "f1": 0.6266,
+          "tp": 193,
+          "fp": 51,
+          "fn": 179
+        },
+        "due_date": {
+          "precision": 0.973,
+          "recall": 0.5243,
+          "f1": 0.6814,
+          "tp": 108,
+          "fp": 3,
+          "fn": 98
+        },
+        "gstin": {
+          "precision": 0.9487,
+          "recall": 0.3627,
+          "f1": 0.5248,
+          "tp": 37,
+          "fp": 2,
+          "fn": 65
+        },
+        "iban": {
+          "precision": 1.0,
+          "recall": 0.3429,
+          "f1": 0.5106,
+          "tp": 36,
+          "fp": 0,
+          "fn": 69
+        },
+        "opening_balance": {
+          "precision": 0.9756,
+          "recall": 0.5063,
+          "f1": 0.6667,
+          "tp": 40,
+          "fp": 1,
+          "fn": 39
+        },
+        "period_end": {
+          "precision": 1.0,
+          "recall": 0.5696,
+          "f1": 0.7258,
+          "tp": 45,
+          "fp": 0,
+          "fn": 34
+        },
+        "period_start": {
+          "precision": 1.0,
+          "recall": 0.5696,
+          "f1": 0.7258,
+          "tp": 45,
+          "fp": 0,
+          "fn": 34
+        },
+        "subtotal": {
+          "precision": 0.8985,
+          "recall": 0.5514,
+          "f1": 0.6834,
+          "tp": 177,
+          "fp": 20,
+          "fn": 144
+        },
+        "tax": {
+          "precision": 0.8985,
+          "recall": 0.5514,
+          "f1": 0.6834,
+          "tp": 177,
+          "fp": 20,
+          "fn": 144
+        },
+        "total": {
+          "precision": 0.8693,
+          "recall": 0.5389,
+          "f1": 0.6654,
+          "tp": 173,
+          "fp": 26,
+          "fn": 148
+        },
+        "vendor_name": {
+          "precision": 0.474,
+          "recall": 0.455,
+          "f1": 0.4643,
+          "tp": 182,
+          "fp": 202,
+          "fn": 218
+        }
+      },
+      "per_template": {
+        "invoice_boxed": {
+          "precision": 0.78,
+          "recall": 0.4548,
+          "f1": 0.5746,
+          "tp": 156,
+          "fp": 44,
+          "fn": 187,
+          "documents": 35,
+          "line_items_f1": 0.3938,
+          "transactions_f1": 0.0
+        },
+        "invoice_classic": {
+          "precision": 0.8541,
+          "recall": 0.5393,
+          "f1": 0.6611,
+          "tp": 199,
+          "fp": 34,
+          "fn": 170,
+          "documents": 38,
+          "line_items_f1": 0.4267,
+          "transactions_f1": 0.0
+        },
+        "invoice_letter": {
+          "precision": 0.7855,
+          "recall": 0.5471,
+          "f1": 0.645,
+          "tp": 238,
+          "fp": 65,
+          "fn": 197,
+          "documents": 45,
+          "line_items_f1": 0.4351,
+          "transactions_f1": 0.0
+        },
+        "invoice_modern": {
+          "precision": 0.7619,
+          "recall": 0.487,
+          "f1": 0.5942,
+          "tp": 224,
+          "fp": 70,
+          "fn": 236,
+          "documents": 48,
+          "line_items_f1": 0.009,
+          "transactions_f1": 0.0
+        },
+        "invoice_tax": {
+          "precision": 0.8319,
+          "recall": 0.4949,
+          "f1": 0.6206,
+          "tp": 193,
+          "fp": 39,
+          "fn": 197,
+          "documents": 40,
+          "line_items_f1": 0.3347,
+          "transactions_f1": 0.0
+        },
+        "receipt_cafe": {
+          "precision": 0.8267,
+          "recall": 0.5322,
+          "f1": 0.6475,
+          "tp": 124,
+          "fp": 26,
+          "fn": 109,
+          "documents": 33,
+          "line_items_f1": 0.3789,
+          "transactions_f1": 0.0
+        },
+        "receipt_retail": {
+          "precision": 0.8182,
+          "recall": 0.4639,
+          "f1": 0.5921,
+          "tp": 135,
+          "fp": 30,
+          "fn": 156,
+          "documents": 42,
+          "line_items_f1": 0.2275,
+          "transactions_f1": 0.0
+        },
+        "receipt_thermal": {
+          "precision": 0.8341,
+          "recall": 0.6064,
+          "f1": 0.7023,
+          "tp": 171,
+          "fp": 34,
+          "fn": 111,
+          "documents": 40,
+          "line_items_f1": 0.31,
+          "transactions_f1": 0.0
+        },
+        "statement_ledger": {
+          "precision": 0.8667,
+          "recall": 0.5369,
+          "f1": 0.663,
+          "tp": 182,
+          "fp": 28,
+          "fn": 157,
+          "documents": 36,
+          "line_items_f1": 0.0,
+          "transactions_f1": 0.2731
+        },
+        "statement_ruled": {
+          "precision": 0.8566,
+          "recall": 0.543,
+          "f1": 0.6647,
+          "tp": 221,
+          "fp": 37,
+          "fn": 186,
+          "documents": 43,
+          "line_items_f1": 0.0,
+          "transactions_f1": 0.3424
+        }
+      },
+      "per_severity": {
+        "clean": {
+          "precision": 0.9457,
+          "recall": 0.8778,
+          "f1": 0.9105,
+          "tp": 783,
+          "fp": 45,
+          "fn": 109,
+          "documents": 100,
+          "cer": 0.0354,
+          "record_accuracy": 0.22
+        },
+        "heavy": {
+          "precision": 0.5519,
+          "recall": 0.1711,
+          "f1": 0.2612,
+          "tp": 234,
+          "fp": 190,
+          "fn": 1134,
+          "documents": 154,
+          "cer": 0.5145,
+          "record_accuracy": 0.0
+        },
+        "light": {
+          "precision": 0.8277,
+          "recall": 0.6408,
+          "f1": 0.7223,
+          "tp": 826,
+          "fp": 172,
+          "fn": 463,
+          "documents": 146,
+          "cer": 0.1319,
+          "record_accuracy": 0.0342
+        }
+      },
+      "per_font": {
+        "unseen": {
+          "precision": 0.5414,
+          "recall": 0.2702,
+          "f1": 0.3605,
+          "tp": 144,
+          "fp": 122,
+          "fn": 389,
+          "documents": 61,
+          "cer": 0.3184
+        },
+        "seen": {
+          "precision": 0.8564,
+          "recall": 0.5633,
+          "f1": 0.6796,
+          "tp": 1699,
+          "fp": 285,
+          "fn": 1317,
+          "documents": 339,
+          "cer": 0.239
+        }
+      }
+    },
+    "line_items": {
+      "precision": 0.4274,
+      "recall": 0.249,
+      "f1": 0.3146,
+      "tp": 300,
+      "fp": 402,
+      "fn": 905
+    },
+    "transactions": {
+      "precision": 0.676,
+      "recall": 0.2049,
+      "f1": 0.3144,
+      "tp": 194,
+      "fp": 93,
+      "fn": 753
+    },
+    "line_items_relaxed": {
+      "precision": 0.6766,
+      "recall": 0.3942,
+      "f1": 0.4982,
+      "tp": 475,
+      "fp": 227,
+      "fn": 730
+    },
+    "transactions_relaxed": {
+      "precision": 0.8293,
+      "recall": 0.2513,
+      "f1": 0.3857,
+      "tp": 238,
+      "fp": 49,
+      "fn": 709
+    },
+    "ocr_cer": {
+      "all": 0.2506,
+      "unseen": 0.3184,
+      "seen": 0.239
+    },
+    "record_accuracy": 0.0675,
+    "header_accuracy": 0.175,
+    "acceptance": {
+      "threshold": 1.0,
+      "accepted": 0,
+      "acceptance_rate": 0.0,
+      "accepted_record_accuracy": 0.0,
+      "accepted_header_accuracy": 0.0,
+      "wrong_accepted": 0,
+      "wrong_header_accepted": 0,
+      "review_rate": 1.0
+    },
+    "acceptance_curve": [
+      {
+        "threshold": 0.3,
+        "accepted": 58,
+        "acceptance_rate": 0.145,
+        "accepted_record_accuracy": 0.431,
+        "accepted_header_accuracy": 0.8966,
+        "wrong_accepted": 33,
+        "wrong_header_accepted": 6,
+        "review_rate": 0.855
+      },
+      {
+        "threshold": 0.5,
+        "accepted": 45,
+        "acceptance_rate": 0.1125,
+        "accepted_record_accuracy": 0.4667,
+        "accepted_header_accuracy": 0.9333,
+        "wrong_accepted": 24,
+        "wrong_header_accepted": 3,
+        "review_rate": 0.8875
+      },
+      {
+        "threshold": 0.7,
+        "accepted": 17,
+        "acceptance_rate": 0.0425,
+        "accepted_record_accuracy": 0.5294,
+        "accepted_header_accuracy": 1.0,
+        "wrong_accepted": 8,
+        "wrong_header_accepted": 0,
+        "review_rate": 0.9575
+      },
+      {
+        "threshold": 0.8,
+        "accepted": 13,
+        "acceptance_rate": 0.0325,
+        "accepted_record_accuracy": 0.5385,
+        "accepted_header_accuracy": 1.0,
+        "wrong_accepted": 6,
+        "wrong_header_accepted": 0,
+        "review_rate": 0.9675
+      },
+      {
+        "threshold": 0.9,
+        "accepted": 2,
+        "acceptance_rate": 0.005,
+        "accepted_record_accuracy": 0.5,
+        "accepted_header_accuracy": 1.0,
+        "wrong_accepted": 1,
+        "wrong_header_accepted": 0,
+        "review_rate": 0.995
+      },
+      {
+        "threshold": 0.95,
+        "accepted": 0,
+        "acceptance_rate": 0.0,
+        "accepted_record_accuracy": 0.0,
+        "accepted_header_accuracy": 0.0,
+        "wrong_accepted": 0,
+        "wrong_header_accepted": 0,
+        "review_rate": 1.0
+      }
+    ],
+    "effort": {
+      "manual_cost": 3549.0,
+      "assisted_cost": 2074.6,
+      "effort_saved_fraction": 0.4154,
+      "verify_cost_per_field": 0.2,
+      "correct_cost_per_field": 1.0,
+      "manual_cost_per_field": 1.0
+    },
+    "latency_ms": {
+      "mean": 1500.5,
+      "p50": 1112.0,
+      "p95": 3583.6,
+      "max": 7080.8
+    }
+  }
+}

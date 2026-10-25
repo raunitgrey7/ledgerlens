@@ -47,12 +47,13 @@ tests and the benchmark are organised.
 | `pipeline/ocr/atlas.py` | The shipped OCR: templates rendered from the seen fonts, intensity-normalised grey matching, fused-glyph splitting, Viterbi over character classes, logistic calibration | No Tesseract binary on the build machine; see README for the implication |
 | `pipeline/ocr/tesseract.py`, `factory.py` | Optional Tesseract adapter and engine selection | Same `OCRPage` contract either way |
 | `pipeline/layout.py` | Rows, fuzzy labels, values to the right or below, table headers to columns | Every extracted value is explainable by the label it sat next to |
-| `pipeline/extract.py` | Document type, header fields, line items, receipt items, transactions | Anchored searches with per-type lexicons and arithmetic fallbacks |
+| `pipeline/extract.py` | Document type, header fields, currency vote, line items, receipt items, transactions, arithmetic recovery of a missing amount | Anchored searches with per-type lexicons and arithmetic fallbacks |
 | `pipeline/validate.py` | Totals, item sums, item arithmetic, dates, periods, IBAN and GSTIN checksums, balance chain, tax rate, currency | Cheap truth; failed hard rules force review |
-| `pipeline/confidence.py` | Field confidence adjusted by rules, document confidence as a product, accept or review | A threshold on the product trades automation against error rate directly |
+| `pipeline/confidence.py` | Field confidence adjusted by rules, expected-field and labelled-field penalties, document confidence as a product, accept or review | A threshold on the product trades automation against error rate directly |
+| `pipeline/calibration.py` | Per-field logistic calibration of confidences, fitted on the calibration split, saved as JSON | Raw confidences rank values within a field but are not comparable across fields |
 | `pipeline/run.py` | `Pipeline.process(image)` | One call from pixels to a decision, with an optional LLM second reader |
 | `llm/anthropic_adapter.py` | Optional Claude reviewer for low-confidence fields | Behind `LEDGERLENS_LLM=1`; rules still decide |
-| `bench/` | Splits, metrics, runner (process pool), report, threshold selection, gate | Numbers in the README come only from here |
+| `bench/` | Splits (parallel generation), metrics, runner (process pool, one OCR pass per page), calibration fit and rescoring, threshold selection, report, README block writer, gate | Numbers in the README come only from here |
 | `api/` | FastAPI app, SQLite storage, review queue, Prometheus metrics, JSON logs, API-key auth, static dashboard | Low-confidence documents land in a queue; corrections are measured |
 | `cli.py` | `generate`, `extract`, `bench`, `serve`, `atlas` | The same code paths the Makefile uses |
 
@@ -68,16 +69,22 @@ tests and the benchmark are organised.
    and splits words.
 3. The atlas engine vectorises each glyph (intensity-normalised grey crop, square
    padded, 20x20, blurred, unit norm) plus three geometric features, scores it against
-   every template in one matrix product, reduces to the best score per character,
-   optionally splits fused blobs, smooths character classes with a Viterbi pass and
-   converts scores to probabilities with the fitted logistic.
+   all 14,237 templates in one matrix product, reduces to the best score per character,
+   splits fused blobs at the cut whose weaker half scores best (searched in one batch),
+   smooths character classes with a Viterbi pass and converts scores to probabilities
+   with the fitted logistic.
 4. `layout.build_rows` merges segments into page-wide rows. `extract` classifies the
-   document from vocabulary and paper shape, then runs the anchored searches for each
-   field, the table parser for line items or transactions, or the till-pattern parser
-   for receipts.
-5. `validate.run_rules` checks arithmetic, checksums and dates. `confidence.apply_rules`
-   moves field confidences, `document_confidence` multiplies them, `decide` routes the
-   page.
+   document from vocabulary and paper shape, reads identifiers and votes on the
+   currency (codes and labels count double, symbols once), takes the date order from
+   that currency, then runs the anchored searches for each field, the table parser for
+   line items or transactions (amounts are placed by their right edge), or the
+   till-pattern parser for receipts. If exactly one of subtotal, tax and total is
+   missing, the printed amount that satisfies the sum fills it. Optional fields whose
+   label is printed but whose value was not read are flagged.
+5. `validate.run_rules` checks arithmetic, checksums, dates and statement periods.
+   `confidence.apply_rules` moves field confidences, the calibrator maps them to
+   probabilities, `document_confidence` multiplies them with penalties for missing and
+   flagged fields, and `decide` routes the page.
 
 ## Where state lives
 
@@ -85,8 +92,11 @@ tests and the benchmark are organised.
   Rebuilt automatically when fonts, charset or atlas version change.
 - `data/synthetic/<split>/`: generated pages, ground truth and a manifest.
 - `data/ledgerlens.db`: API storage (documents and reviews).
-- `benchmarks/results.json`, `benchmarks/threshold.json`: the latest measurement and the
-  threshold the API reads at start-up.
+- `benchmarks/results.json`, `benchmarks/RESULTS.md`, `benchmarks/documents.jsonl`: the
+  latest measurement, its tables, and one line per test document.
+- `benchmarks/calibration.json`, `benchmarks/threshold.json`: the field calibration and
+  threshold the API and CLI read at start-up (identity and 0.5 when absent).
+- `benchmarks/thresholds.json`: the limits the benchmark gate enforces.
 
 ## Extending
 
