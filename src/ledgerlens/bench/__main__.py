@@ -21,8 +21,8 @@ from ledgerlens.bench.metrics import DocScore, EffortModel, choose_threshold
 from ledgerlens.bench.report import markdown_breakdowns, markdown_table, summarise
 from ledgerlens.bench.runner import calibration_samples, rescore, run_split
 from ledgerlens.config import get_settings
-from ledgerlens.generator.dataset import SplitSpec, build_split, split_dir
-from ledgerlens.pipeline.calibration import fit_calibrator
+from ledgerlens.generator.dataset import Manifest, SplitSpec, build_split, split_dir
+from ledgerlens.pipeline.calibration import FieldCalibrator, fit_calibrator
 from ledgerlens.pipeline.ocr.factory import resolve_engine_name
 
 CAL_SEED = 101
@@ -83,30 +83,76 @@ def write_documents(path: Path, scores: list[DocScore]) -> None:
             )
 
 
+def calibrate_and_choose(raw_cal_scores: list[DocScore], out: Path) -> tuple[FieldCalibrator, float, list[DocScore]]:
+    """Fit the field calibration on the calibration split, save it, and choose the threshold on it."""
+    calibrator = fit_calibrator(calibration_samples(raw_cal_scores))
+    calibrator.save(out / "calibration.json")
+    threshold = choose_threshold(rescore(raw_cal_scores, calibrator, 0.0), TARGET_ACCEPTED_HEADER_ACCURACY)
+    return calibrator, threshold, rescore(raw_cal_scores, calibrator, threshold)
+
+
+def run_meta(
+    args: argparse.Namespace, engine_name: str, manifests: dict[str, Manifest], seconds: dict[str, float]
+) -> dict[str, object]:
+    """Provenance recorded with every result: code, machine, engine, split inputs and wall time."""
+    seeds = {"calibration": (args.cal_size, CAL_SEED), "test": (args.test_size, TEST_SEED)}
+    return {
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "ledgerlens_version": __version__,
+        "git_commit": git_commit(),
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "machine": platform.machine(),
+        "ocr_engine": engine_name,
+        "jobs": args.jobs,
+        "splits": {
+            name: {"size": size, "seed": seed, "fingerprint": manifests[name].fingerprint}
+            for name, (size, seed) in seeds.items()
+        },
+        "seconds": seconds,
+    }
+
+
+def write_outputs(out: Path, results: dict[str, object], test_scores: list[DocScore], threshold: float) -> str:
+    """Write results.json, documents.jsonl, threshold.json and RESULTS.md; returns the headline table."""
+    (out / "results.json").write_text(json.dumps(results, indent=2))
+    write_documents(out / "documents.jsonl", test_scores)
+    (out / "threshold.json").write_text(json.dumps({"threshold": threshold}, indent=2))
+    table = markdown_table(results)
+    meta = results["meta"]
+    (out / "RESULTS.md").write_text(
+        f"# Benchmark results\n\nGenerated {meta['generated_at']} with engine `{meta['ocr_engine']}` "  # type: ignore[index]
+        f"on {meta['platform']}.\n\n{table}\n\n{markdown_breakdowns(results)}\n"  # type: ignore[index]
+    )
+    return table
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     settings = get_settings()
     data_root = (args.data or settings.data_dir) / "synthetic"
     engine_name = resolve_engine_name(args.engine or settings.ocr_engine)
-    started = time.perf_counter()
-    cal_spec = SplitSpec("calibration", args.cal_size, CAL_SEED)
-    test_spec = SplitSpec("test", args.test_size, TEST_SEED)
-    cal_manifest = build_split(data_root, cal_spec, force=args.rebuild, jobs=args.jobs)
-    test_manifest = build_split(data_root, test_spec, force=args.rebuild, jobs=args.jobs)
-    built = time.perf_counter()
-    effort = EffortModel()
-    raw_cal_scores = run_split(
-        split_dir(data_root, "calibration"), cal_manifest.doc_ids, engine_name, settings.atlas_dir, 0.0, args.jobs
-    )
-    calibrator = fit_calibrator(calibration_samples(raw_cal_scores))
     args.out.mkdir(parents=True, exist_ok=True)
-    calibrator.save(args.out / "calibration.json")
-    cal_scores = rescore(raw_cal_scores, calibrator, 0.0)
-    threshold = choose_threshold(cal_scores, TARGET_ACCEPTED_HEADER_ACCURACY)
-    cal_scores = rescore(raw_cal_scores, calibrator, threshold)
+    started = time.perf_counter()
+    manifests = {
+        "calibration": build_split(
+            data_root, SplitSpec("calibration", args.cal_size, CAL_SEED), args.rebuild, args.jobs
+        ),
+        "test": build_split(data_root, SplitSpec("test", args.test_size, TEST_SEED), args.rebuild, args.jobs),
+    }
+    built = time.perf_counter()
+    raw_cal_scores = run_split(
+        split_dir(data_root, "calibration"),
+        manifests["calibration"].doc_ids,
+        engine_name,
+        settings.atlas_dir,
+        0.0,
+        args.jobs,
+    )
+    calibrator, threshold, cal_scores = calibrate_and_choose(raw_cal_scores, args.out)
     test_scores = run_split(
         split_dir(data_root, "test"),
-        test_manifest.doc_ids,
+        manifests["test"].doc_ids,
         engine_name,
         settings.atlas_dir,
         threshold,
@@ -114,22 +160,14 @@ def main(argv: list[str] | None = None) -> int:
         calibration=args.out / "calibration.json",
     )
     finished = time.perf_counter()
+    effort = EffortModel()
     results: dict[str, object] = {
-        "meta": {
-            "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
-            "ledgerlens_version": __version__,
-            "git_commit": git_commit(),
-            "python": platform.python_version(),
-            "platform": platform.platform(),
-            "machine": platform.machine(),
-            "ocr_engine": engine_name,
-            "jobs": args.jobs,
-            "splits": {
-                "calibration": {"size": args.cal_size, "seed": CAL_SEED, "fingerprint": cal_manifest.fingerprint},
-                "test": {"size": args.test_size, "seed": TEST_SEED, "fingerprint": test_manifest.fingerprint},
-            },
-            "seconds": {"build_data": round(built - started, 1), "evaluate": round(finished - built, 1)},
-        },
+        "meta": run_meta(
+            args,
+            engine_name,
+            manifests,
+            {"build_data": round(built - started, 1), "evaluate": round(finished - built, 1)},
+        ),
         "field_calibration": {name: list(params) for name, params in sorted(calibrator.params.items())},
         "threshold": {
             "value": threshold,
@@ -139,15 +177,7 @@ def main(argv: list[str] | None = None) -> int:
         "calibration": summarise(cal_scores, threshold, effort),
         "test": summarise(test_scores, threshold, effort),
     }
-    (args.out / "results.json").write_text(json.dumps(results, indent=2))
-    write_documents(args.out / "documents.jsonl", test_scores)
-    (args.out / "threshold.json").write_text(json.dumps({"threshold": threshold}, indent=2))
-    table = markdown_table(results)
-    (args.out / "RESULTS.md").write_text(
-        f"# Benchmark results\n\nGenerated {results['meta']['generated_at']} with engine `{engine_name}` "  # type: ignore[index]
-        f"on {platform.platform()}.\n\n{table}\n\n{markdown_breakdowns(results)}\n"
-    )
-    print(table)
+    print(write_outputs(args.out, results, test_scores, threshold))
     failures = evaluate_gate(results, load_thresholds(args.thresholds)) if args.gate else []
     for failure in failures:
         print(f"GATE FAIL {failure}")

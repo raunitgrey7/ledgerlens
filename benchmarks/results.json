@@ -1,8 +1,8 @@
 {
   "meta": {
-    "generated_at": "2026-10-25T04:15:25+00:00",
+    "generated_at": "2026-10-25T04:30:41+00:00",
     "ledgerlens_version": "0.1.0",
-    "git_commit": "65b006a",
+    "git_commit": "fba3201",
     "python": "3.13.17",
     "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
     "machine": "arm64",
@@ -22,7 +22,7 @@
     },
     "seconds": {
       "build_data": 0.1,
-      "evaluate": 270.5
+      "evaluate": 282.8
     }
   },
   "field_calibration": {
@@ -31,40 +31,40 @@
       1.7951284232284672
     ],
     "customer_name": [
-      0.15418467473988243,
-      0.48194253250148283
+      0.09364837968358822,
+      0.4831460095663543
     ],
     "document_date": [
-      0.7275805896630606,
-      1.6480106623061481
+      0.6995808007314006,
+      1.5951224308657919
     ],
     "document_number": [
-      1.9384943832509192,
-      0.4096864054834199
+      1.8932732316165923,
+      0.3913157722681908
     ],
     "due_date": [
-      1.9833706410154799,
-      1.5575997160586306
+      1.9299927082827562,
+      1.5963395093428596
     ],
     "opening_balance": [
-      1.5150415299106845,
-      0.4241038395036986
+      1.4922999994088177,
+      0.43359015854717864
     ],
     "subtotal": [
-      2.221785490290981,
-      0.859012360001682
+      2.1919826285969015,
+      0.8592983024905385
     ],
     "tax": [
-      0.7824066598553698,
-      1.0231540048998748
+      0.7291527064620741,
+      1.0279559393323985
     ],
     "total": [
-      1.174902268343066,
-      1.2309019680758508
+      1.102756769230416,
+      1.2114145306334956
     ],
     "vendor_name": [
-      1.2242640426257976,
-      1.015506261480687
+      1.0658863435259858,
+      1.0198370822130578
     ]
   },
   "threshold": {
@@ -428,13 +428,13 @@
     "acceptance_curve": [
       {
         "threshold": 0.3,
-        "accepted": 26,
-        "acceptance_rate": 0.13,
-        "accepted_record_accuracy": 0.3846,
-        "accepted_header_accuracy": 0.8077,
-        "wrong_accepted": 16,
-        "wrong_header_accepted": 5,
-        "review_rate": 0.87
+        "accepted": 25,
+        "acceptance_rate": 0.125,
+        "accepted_record_accuracy": 0.4,
+        "accepted_header_accuracy": 0.84,
+        "wrong_accepted": 15,
+        "wrong_header_accepted": 4,
+        "review_rate": 0.875
       },
       {
         "threshold": 0.5,
@@ -496,10 +496,10 @@
       "manual_cost_per_field": 1.0
     },
     "latency_ms": {
-      "mean": 1390.1,
-      "p50": 1074.2,
-      "p95": 3527.5,
-      "max": 5322.8
+      "mean": 1511.2,
+      "p50": 1159.1,
+      "p95": 3837.4,
+      "max": 5491.4
     }
   },
   "test": {
@@ -868,13 +868,13 @@
       },
       {
         "threshold": 0.5,
-        "accepted": 45,
-        "acceptance_rate": 0.1125,
-        "accepted_record_accuracy": 0.4667,
-        "accepted_header_accuracy": 0.9333,
+        "accepted": 47,
+        "acceptance_rate": 0.1175,
+        "accepted_record_accuracy": 0.4894,
+        "accepted_header_accuracy": 0.9362,
         "wrong_accepted": 24,
         "wrong_header_accepted": 3,
-        "review_rate": 0.8875
+        "review_rate": 0.8825
       },
       {
         "threshold": 0.7,
@@ -888,13 +888,13 @@
       },
       {
         "threshold": 0.8,
-        "accepted": 13,
-        "acceptance_rate": 0.0325,
-        "accepted_record_accuracy": 0.5385,
+        "accepted": 14,
+        "acceptance_rate": 0.035,
+        "accepted_record_accuracy": 0.5,
         "accepted_header_accuracy": 1.0,
-        "wrong_accepted": 6,
+        "wrong_accepted": 7,
         "wrong_header_accepted": 0,
-        "review_rate": 0.9675
+        "review_rate": 0.965
       },
       {
         "threshold": 0.9,
@@ -926,10 +926,10 @@
       "manual_cost_per_field": 1.0
     },
     "latency_ms": {
-      "mean": 1500.5,
-      "p50": 1112.0,
-      "p95": 3583.6,
-      "max": 7080.8
+      "mean": 1522.2,
+      "p50": 1119.7,
+      "p95": 3766.8,
+      "max": 6981.8
     }
   }
 }

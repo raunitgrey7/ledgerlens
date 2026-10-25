@@ -58,9 +58,9 @@ flowchart LR
 
 ```
 cd ~/forge/ledgerlens
-make setup        # uv sync and build the OCR glyph atlas (about 15 s)
-make test         # pytest, about 2 minutes on a laptop
-make bench        # generate 550 pages, score them, write benchmarks/results.json
+make setup        # uv sync and build the OCR glyph atlas (25 s from a fresh clone here)
+make test         # 116 tests (30 s here)
+make bench        # generate 600 pages, score them, write benchmarks/ and the table below (283 s here)
 make serve        # API and dashboard on http://localhost:8000 (PORT=8001 make serve to move it)
 ```
 
@@ -76,7 +76,7 @@ Or from the command line without the server: `uv run ledgerlens extract data/syn
 ## Measured results
 
 <!-- results:start -->
-Measured on 2026-10-25T04:15:25+00:00 (commit 65b006a, macOS-26.5.1-arm64-arm-64bit-Mach-O, arm64, Python 3.13.17), test split of 400 pages, calibration split of 200 pages, OCR engine `atlas`.
+Measured on 2026-10-25T04:30:41+00:00 (commit fba3201, macOS-26.5.1-arm64-arm-64bit-Mach-O, arm64, Python 3.13.17), test split of 400 pages, calibration split of 200 pages, OCR engine `atlas`.
 
 | Metric | Value |
 |---|---|
@@ -93,7 +93,7 @@ Measured on 2026-10-25T04:15:25+00:00 (commit 65b006a, macOS-26.5.1-arm64-arm-64
 | Accepted documents with every header field exact | 0.0% |
 | Accepted documents also exact on every line item and transaction | 0.0% |
 | Human effort saved (cost model in docs/EVALUATION.md) | 41.5% |
-| Latency per page, mean / p50 / p95 (ms) | 1500.5 / 1112.0 / 3583.6 |
+| Latency per page, mean / p50 / p95 (ms) | 1522.2 / 1119.7 / 3766.8 |
 
 ### Per field
 
@@ -150,9 +150,9 @@ Measured on 2026-10-25T04:15:25+00:00 (commit 65b006a, macOS-26.5.1-arm64-arm-64
 | Threshold | Accepted | Header exact | Fully exact | Accepted with a header error |
 |---|---|---|---|---|
 | 0.3 | 14.5% | 89.7% | 43.1% | 6 |
-| 0.5 | 11.2% | 93.3% | 46.7% | 3 |
+| 0.5 | 11.8% | 93.6% | 48.9% | 3 |
 | 0.7 | 4.2% | 100.0% | 52.9% | 0 |
-| 0.8 | 3.2% | 100.0% | 53.8% | 0 |
+| 0.8 | 3.5% | 100.0% | 50.0% | 0 |
 | 0.9 | 0.5% | 100.0% | 50.0% | 0 |
 | 0.95 | 0.0% | 0.0% | 0.0% | 0 |
 <!-- results:end -->
@@ -241,14 +241,14 @@ Multi-stage build, non-root user, atlas prebuilt into the image.
   misread. Heavy pages (blur, motion blur, JPEG, stamps) reach only 26.1% field F1 and
   51.4% character error rate; clean pages reach 91.0% and 3.5%.
 - The atlas OCR is a nearest-template recogniser. It degrades sharply on heavy blur and
-  on unseen faces (36.1% field F1 on unseen fonts against 68.0% on seen ones), and it
+  on unseen faces (36.0% field F1 on unseen fonts against 68.0% on seen ones), and it
   has no language model beyond character-class smoothing.
 - Names have no checksum. Vendor and customer names are the least accurate fields
   (46.4% and 36.5% F1) and the cause of most confidently wrong records, which is why no
   threshold met the 95% acceptance bar on the calibration split.
 - Exact line-item matching is strict: one misread character in a description fails
   the row (31.5% exact F1, 49.8% with relaxed descriptions).
-- Latency is 1.5 s per page on average on an Apple Silicon laptop core, 3.6 s at the
+- Latency is 1.5 s per page on average on an Apple Silicon laptop core, 3.8 s at the
   95th percentile; heavy pages cost most because fused glyphs trigger the cut search.
 - Receipts with tax included in prices, multi-page documents, handwriting, wrapped
   table descriptions and discounts are not generated and not handled.
