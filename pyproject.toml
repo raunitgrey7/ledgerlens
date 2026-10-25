@@ -1,0 +1,63 @@
+[project]
+name = "ledgerlens"
+version = "0.1.0"
+description = "Document intelligence for invoices, receipts and bank statements: synthetic data, OCR, extraction, validation, review queue."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.162.0",
+    "numpy>=2.5.4",
+    "pillow>=13.0.0",
+    "prometheus-client>=0.26.0",
+    "pydantic>=2.14.1",
+    "python-multipart>=0.0.32",
+    "scipy>=1.18.1",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/raunitgrey7/ledgerlens"
+
+[project.scripts]
+ledgerlens = "ledgerlens:main"
+
+[project.optional-dependencies]
+tesseract = [
+    "pytesseract>=0.3.13",
+]
+llm = [
+    "anthropic>=1.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "hypothesis>=6.170.9",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.2",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "N", "C4", "PIE", "T20"]
+ignore = ["RUF012", "T201", "B008", "RUF001", "RUF002", "RUF003", "E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "T20"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -p no:cacheprovider"
+filterwarnings = ["error::DeprecationWarning:ledgerlens.*"]
