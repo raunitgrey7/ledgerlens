@@ -17,7 +17,9 @@ from ledgerlens.pipeline.ocr.base import OCRLine, OCRPage, OCRWord
 
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 TEXT_COLUMNS = frozenset({"description", "date"})
+SEPARATOR_CHARS = ":;-|.,'\"_~=*"
 TEXT_COLUMN_MARGIN = 24.0
+SHORT_KEYWORD_THRESHOLD = 0.6
 
 
 def normalise(text: str) -> str:
@@ -90,8 +92,10 @@ def find_label(
 ) -> list[LabelMatch]:
     """All rows where a phrase appears as a run of words at any position.
 
-    Matches are ordered best score first; ``exclude`` phrases that also match the same
-    run (for example "sub total" when looking for "total") veto the match.
+    Matches are ordered best score first. An ``exclude`` phrase vetoes a match when a
+    run of the exclude phrase's own length that overlaps the match fits it at least as
+    well as the label fits ("Sub Total" is not a "Total"). Comparing the bare label with
+    a longer phrase would wrongly veto "Invoice" because it resembles "Tax Invoice".
     """
     matches: list[LabelMatch] = []
     for index, row in enumerate(rows):
@@ -101,16 +105,21 @@ def find_label(
             for start in range(max(0, len(words) - length + 1)):
                 run = words[start : start + length]
                 score = similarity(" ".join(w.text for w in run), phrase)
-                if score < threshold:
-                    continue
-                wider = words[max(0, start - 1) : start + length + 1]
-                if any(similarity(" ".join(w.text for w in wider), ex) >= threshold for ex in exclude):
-                    continue
-                if any(similarity(" ".join(w.text for w in run), ex) >= threshold for ex in exclude):
+                if score < threshold or _excluded(words, start, length, exclude, max(score, threshold)):
                     continue
                 matches.append(LabelMatch(index, run, score, words[start + length :]))
     matches.sort(key=lambda m: (-m.score, m.row_index))
     return matches
+
+
+def _excluded(words: list[OCRWord], start: int, length: int, exclude: tuple[str, ...], bar: float) -> bool:
+    """True when some exclude phrase fits a same-length run of words that overlaps the match."""
+    for phrase in exclude:
+        size = len(phrase.split())
+        for first in range(max(0, start - size + 1), min(start + length, len(words) - size + 1)):
+            if similarity(" ".join(w.text for w in words[first : first + size]), phrase) >= bar:
+                return True
+    return False
 
 
 def row_below(rows: list[Row], index: int, max_gap: float = 2.5) -> Row | None:
@@ -150,8 +159,8 @@ def line_below(rows: list[Row], index: int, x0: float, x1: float, max_gap: float
 
 
 def strip_separators(words: list[OCRWord]) -> list[OCRWord]:
-    """Drop lone punctuation tokens such as ':' or '-' that follow a label."""
-    return [w for w in words if normalise(w.text)]
+    """Drop lone punctuation tokens such as ':' or '-' that follow a label; '&' is part of names."""
+    return [w for w in words if w.text.strip(SEPARATOR_CHARS)]
 
 
 @dataclass
@@ -174,9 +183,15 @@ class TableHeader:
     row_index: int
     columns: list[Column]
 
-    def column_for(self, word: OCRWord) -> Column | None:
+    def column_for(self, word: OCRWord, right_aligned: bool = False) -> Column | None:
+        """The column holding a word: by its centre, or by its right edge for right-aligned values.
+
+        Amounts are printed right-aligned under their header, so a wide value can start
+        left of its column's boundary; its right edge never does.
+        """
+        x = word.x1 - 1 if right_aligned else word.cx
         for column in self.columns:
-            if column.contains(word):
+            if column.x0 <= x < column.x1:
                 return column
         return None
 
@@ -227,8 +242,19 @@ def _header_columns(row: Row, keywords: dict[str, tuple[str, ...]], threshold: f
             for phrase in phrases:
                 length = len(phrase.split())
                 run = words[position : position + length]
-                if len(run) == length and similarity(" ".join(w.text for w in run), phrase) >= threshold:
+                if len(run) == length and _keyword_matches(" ".join(w.text for w in run), phrase, threshold):
                     found.append((name, word))
                     taken.add(name)
                     break
     return found
+
+
+def _keyword_matches(text: str, phrase: str, threshold: float) -> bool:
+    """Fuzzy keyword test that tolerates one wrong character in short keywords of the same length.
+
+    One misread letter costs a three-letter keyword like "Qty" a third of its similarity,
+    so short keywords of equal length only need SHORT_KEYWORD_THRESHOLD.
+    """
+    a, b = normalise(text), normalise(phrase)
+    limit = SHORT_KEYWORD_THRESHOLD if len(b) <= 4 and len(a) == len(b) else threshold
+    return similarity(text, phrase) >= limit

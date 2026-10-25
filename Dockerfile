@@ -11,10 +11,11 @@ FROM python:3.13-slim-bookworm AS runtime
 RUN useradd --create-home --uid 10001 app
 WORKDIR /app
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
-COPY --chown=app:app benchmarks/threshold.json /app/benchmarks/threshold.json
+COPY --chown=app:app benchmarks/threshold.json benchmarks/calibration.json /app/benchmarks/
 ENV PATH="/app/.venv/bin:$PATH" \
     LEDGERLENS_DATA_DIR=/app/data \
     LEDGERLENS_THRESHOLD_FILE=/app/benchmarks/threshold.json \
+    LEDGERLENS_CALIBRATION_FILE=/app/benchmarks/calibration.json \
     PYTHONUNBUFFERED=1
 USER app
 RUN mkdir -p /app/data && ledgerlens atlas

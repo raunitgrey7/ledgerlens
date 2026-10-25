@@ -27,7 +27,8 @@ def test_gate_reports_each_violation(tmp_path: Path) -> None:
             "fields": {"micro": {"f1": 0.5}},
             "line_items": {"f1": 0.2},
             "transactions": {"f1": 0.3},
-            "acceptance": {"accepted_record_accuracy": 0.9},
+            "acceptance": {"acceptance_rate": 0.4, "wrong_header_accepted": 2},
+            "documents": 100,
             "doc_type_accuracy": 0.99,
             "ocr_cer": {"seen": 0.2},
             "latency_ms": {"p95": 5000.0},
@@ -35,6 +36,9 @@ def test_gate_reports_each_violation(tmp_path: Path) -> None:
     }
     assert evaluate_gate(results, load_thresholds(tmp_path / "missing.json")) == []
     strict = tmp_path / "thresholds.json"
-    strict.write_text(json.dumps({"fields_micro_f1_min": 0.9, "latency_p95_ms_max": 1000.0}))
+    strict.write_text(
+        json.dumps({"fields_micro_f1_min": 0.9, "latency_p95_ms_max": 1000.0, "wrong_accepted_rate_max": 0.01})
+    )
     failures = evaluate_gate(results, load_thresholds(strict))
-    assert len(failures) == 2 and failures[0].startswith("fields_micro_f1_min")
+    assert len(failures) == 3 and failures[0].startswith("fields_micro_f1_min")
+    assert any(f.startswith("wrong_accepted_rate_max: measured 0.02") for f in failures)

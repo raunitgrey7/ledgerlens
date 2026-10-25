@@ -20,9 +20,11 @@ test:
 
 bench:
 	$(UV) run python -m ledgerlens.bench --jobs $(JOBS)
+	$(UV) run python -m ledgerlens.bench.readme
 
 bench-gate:
 	$(UV) run python -m ledgerlens.bench --jobs $(JOBS) --gate
+	$(UV) run python -m ledgerlens.bench.readme
 
 serve:
 	$(UV) run ledgerlens serve --host 0.0.0.0 --port 8000

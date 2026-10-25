@@ -16,6 +16,7 @@ from ledgerlens.schemas import DocType, ExtractedField, LineItem, RuleResult, Tr
 
 CENT = Decimal("0.01")
 KNOWN_CURRENCIES = frozenset({"INR", "GBP", "EUR", "USD"})
+STATEMENT_ISSUE_DAYS = 14
 HARD_RULES = frozenset({"totals_reconcile", "iban_checksum", "gstin_checksum", "balance_chain", "line_items_sum"})
 
 
@@ -70,12 +71,17 @@ def date_sanity(fields: dict[str, ExtractedField]) -> RuleResult:
 
 
 def period_sanity(fields: dict[str, ExtractedField]) -> RuleResult:
+    """A statement covers at most a quarter and is issued within a fortnight after it ends."""
     start, end = _date(fields, "period_start"), _date(fields, "period_end")
-    names = ["period_start", "period_end"]
+    issued = _date(fields, "document_date")
+    names = ["period_start", "period_end"] + (["document_date"] if issued is not None else [])
     if start is None or end is None:
         return RuleResult(name="period_sanity", passed=None, detail="no period", fields=names)
     span = (end - start).days
-    return RuleResult(name="period_sanity", passed=0 <= span <= 92, detail=f"{span} days", fields=names)
+    ok = 0 <= span <= 92
+    if issued is not None:
+        ok = ok and end <= issued <= end + timedelta(days=STATEMENT_ISSUE_DAYS)
+    return RuleResult(name="period_sanity", passed=ok, detail=f"{span} days, issued {issued}", fields=names)
 
 
 def iban_checksum(fields: dict[str, ExtractedField]) -> RuleResult:

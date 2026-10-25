@@ -66,7 +66,21 @@ def test_line_cer_uses_words_inside_each_line() -> None:
 def _score(confidence: float, correct: bool, accepted: bool = True) -> DocScore:
     fields = {"total": Counts(tp=1) if correct else Counts(fp=1, fn=1), "tax": Counts(tp=1)}
     return DocScore(
-        "d", "invoice", "t", "clean", True, True, fields, Counts(), Counts(), confidence, accepted, 500.0, 0, 10
+        "d",
+        "invoice",
+        "t",
+        "clean",
+        True,
+        True,
+        fields,
+        Counts(),
+        Counts(),
+        confidence,
+        accepted,
+        500.0,
+        0,
+        10,
+        hard_rule_failed=not accepted,
     )
 
 
@@ -77,6 +91,33 @@ def test_acceptance_effort_and_threshold_selection() -> None:
     assert acceptance_summary(scores, 0.5)["wrong_accepted"] == 1
     effort = effort_summary(scores, 0.8, EffortModel())
     assert effort["manual_cost"] == 8.0 and effort["assisted_cost"] == 2 * (1.0 + 0.2)
-    assert choose_threshold(scores, 0.98) == 0.61
+    assert choose_threshold(scores, 0.98, min_accepted=1) == 0.61
+    assert choose_threshold(scores, 0.98) == 1.0
     assert choose_threshold([_score(0.9, False)], 0.98) == 1.0
     assert latency_summary([100.0, 200.0, 300.0])["p50"] == 200.0
+
+
+def test_relaxed_row_matching_tolerates_description_typos_but_not_amounts() -> None:
+    from ledgerlens.bench.metrics import match_line_items_relaxed
+
+    gold = [
+        LineItem(
+            description="Copper wire 2.5 sqmm", quantity=Decimal(2), unit_price=Decimal("5.00"), amount=Decimal("10.00")
+        )
+    ]
+    typo = [
+        LineItem(
+            description="Copper wlre 2.5 sqmrn",
+            quantity=Decimal(2),
+            unit_price=Decimal("5.00"),
+            amount=Decimal("10.00"),
+        )
+    ]
+    wrong_amount = [
+        LineItem(
+            description="Copper wire 2.5 sqmm", quantity=Decimal(2), unit_price=Decimal("5.00"), amount=Decimal("10.01")
+        )
+    ]
+    assert match_line_items(gold, typo).tp == 0
+    assert match_line_items_relaxed(gold, typo).tp == 1
+    assert match_line_items_relaxed(gold, wrong_amount).tp == 0

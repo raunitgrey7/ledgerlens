@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -46,7 +47,7 @@ class Manifest(BaseModel):
     generator_version: str
 
 
-GENERATOR_VERSION = "1"
+GENERATOR_VERSION = "2"
 
 
 def page_rng(seed: int, index: int) -> random.Random:
@@ -95,29 +96,45 @@ def load_manifest(directory: Path) -> Manifest | None:
     return Manifest.model_validate_json(path.read_text())
 
 
-def build_split(root: Path, spec: SplitSpec, force: bool = False) -> Manifest:
-    """Write the split unless an identical one is already on disk."""
+def _write_page(args: tuple[SplitSpec, int, str]) -> tuple[str, str]:
+    """Render page ``index`` into ``directory``; returns (doc_id, ground-truth JSON) for the fingerprint."""
+    spec, index, directory = args
+    page, truth = build_document(spec, index)
+    page.save(Path(directory) / f"{truth.doc_id}.png", format="PNG", compress_level=3)
+    payload = truth.model_dump_json()
+    (Path(directory) / f"{truth.doc_id}.json").write_text(payload)
+    return truth.doc_id, payload
+
+
+def build_split(root: Path, spec: SplitSpec, force: bool = False, jobs: int = 1) -> Manifest:
+    """Write the split unless an identical one is already on disk.
+
+    Pages are independent (each has its own RNG stream), so they can be rendered by
+    ``jobs`` processes; the fingerprint is still computed in index order.
+    """
     directory = split_dir(root, spec.name)
     existing = load_manifest(directory)
     if (
         existing is not None
         and not force
         and existing.spec == _spec_dict(spec)
+        and existing.generator_version == GENERATOR_VERSION
         and _fingerprint_ok(directory, existing)
     ):
         return existing
     directory.mkdir(parents=True, exist_ok=True)
     for stale in directory.glob("*"):
         stale.unlink()
+    tasks = [(spec, index, str(directory)) for index in range(spec.size)]
+    if jobs > 1:
+        with ProcessPoolExecutor(max_workers=jobs) as pool:
+            written = list(pool.map(_write_page, tasks, chunksize=8))
+    else:
+        written = [_write_page(task) for task in tasks]
     digest = hashlib.sha256()
-    doc_ids: list[str] = []
-    for index in range(spec.size):
-        page, truth = build_document(spec, index)
-        page.save(directory / f"{truth.doc_id}.png", format="PNG", compress_level=3)
-        payload = truth.model_dump_json()
-        (directory / f"{truth.doc_id}.json").write_text(payload)
+    for _, payload in written:
         digest.update(payload.encode())
-        doc_ids.append(truth.doc_id)
+    doc_ids = [doc_id for doc_id, _ in written]
     manifest = Manifest(
         spec=_spec_dict(spec), doc_ids=doc_ids, fingerprint=digest.hexdigest(), generator_version=GENERATOR_VERSION
     )

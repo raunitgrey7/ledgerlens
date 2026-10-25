@@ -87,6 +87,8 @@ def summarise(scores: list[DocScore], threshold: float, effort: EffortModel) -> 
         },
         "line_items": _rows_micro(scores, "items").as_dict(),
         "transactions": _rows_micro(scores, "transactions").as_dict(),
+        "line_items_relaxed": _rows_micro(scores, "items_relaxed").as_dict(),
+        "transactions_relaxed": _rows_micro(scores, "transactions_relaxed").as_dict(),
         "ocr_cer": {"all": _cer(scores), **{k: v["cer"] for k, v in by_font.items()}},
         "record_accuracy": round(sum(s.record_correct for s in scores) / len(scores), 4),
         "header_accuracy": round(sum(s.header_correct for s in scores) / len(scores), 4),
@@ -114,12 +116,18 @@ def markdown_table(results: dict[str, object]) -> str:
         f"{_pct(fields['micro']['recall'])} / {_pct(fields['micro']['f1'])} |",
         f"| Line-item F1 (exact description, quantity, amount) | {_pct(test['line_items']['f1'])} |",
         f"| Transaction F1 (exact row) | {_pct(test['transactions']['f1'])} |",
+        f"| Line-item F1 / transaction F1, amounts exact and description similarity at least 0.8 | "
+        f"{_pct(test['line_items_relaxed']['f1'])} / {_pct(test['transactions_relaxed']['f1'])} |",
         f"| OCR character error rate, seen fonts / unseen fonts | {_pct(test['ocr_cer'].get('seen', 0.0))} / "
         f"{_pct(test['ocr_cer'].get('unseen', 0.0))} |",
         f"| Fully correct records (all fields and rows) | {_pct(test['record_accuracy'])} |",
-        f"| Acceptance threshold (chosen on calibration split) | {test['acceptance']['threshold']} |",
+        f"| Acceptance threshold (lowest with 95% header accuracy on the calibration split) | "
+        f"{test['acceptance']['threshold']} |",
         f"| Accepted without review | {_pct(test['acceptance']['acceptance_rate'])} |",
-        f"| Accepted records fully correct | {_pct(test['acceptance']['accepted_record_accuracy'])} |",
+        f"| Accepted documents with every header field exact | "
+        f"{_pct(test['acceptance']['accepted_header_accuracy'])} |",
+        f"| Accepted documents also exact on every line item and transaction | "
+        f"{_pct(test['acceptance']['accepted_record_accuracy'])} |",
         f"| Human effort saved (cost model in docs/EVALUATION.md) | {_pct(test['effort']['effort_saved_fraction'])} |",
         f"| Latency per page, mean / p50 / p95 (ms) | {test['latency_ms']['mean']} / {test['latency_ms']['p50']} / "
         f"{test['latency_ms']['p95']} |",
@@ -168,12 +176,13 @@ def markdown_breakdowns(results: dict[str, object]) -> str:
         "",
         "### Acceptance at other thresholds (test split)",
         "",
-        "| Threshold | Accepted | Accepted records fully correct | Wrong acceptances |",
-        "|---|---|---|---|",
+        "| Threshold | Accepted | Header exact | Fully exact | Accepted with a header error |",
+        "|---|---|---|---|---|",
     ]
     for point in test.get("acceptance_curve", []):
         out.append(
             f"| {point['threshold']} | {_pct(point['acceptance_rate'])} | "
-            f"{_pct(point['accepted_record_accuracy'])} | {point['wrong_accepted']} |"
+            f"{_pct(point['accepted_header_accuracy'])} | {_pct(point['accepted_record_accuracy'])} | "
+            f"{point['wrong_header_accepted']} |"
         )
     return "\n".join(out)

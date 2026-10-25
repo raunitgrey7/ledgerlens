@@ -117,24 +117,37 @@ def test_receipt_row_patterns_and_item_arithmetic() -> None:
     assert _build_item("x", None, None, Decimal("9.00")).unit_price == Decimal("9.00")
 
 
-def test_end_to_end_fields_on_clean_pages(pipeline: Pipeline, page_by_type) -> None:
-    for doc_type, (page, truth) in page_by_type.items():
+KEY_FIELDS = (
+    "total",
+    "subtotal",
+    "tax",
+    "document_date",
+    "due_date",
+    "closing_balance",
+    "opening_balance",
+    "period_start",
+    "period_end",
+    "iban",
+    "gstin",
+    "currency",
+)
+
+
+def test_end_to_end_fields_on_clean_pages(pipeline: Pipeline, clean_pages) -> None:
+    """One clean page per template: type always right, at least 90% of key fields exact, row counts right."""
+    checked = hits = rows_right = 0
+    for page, truth in clean_pages:
         result = pipeline.process(page)
-        assert result.doc_type == doc_type
-        gold = canonical_fields(truth.fields)
-        predicted = result.field_map()
-        checked = [
-            name
-            for name in ("total", "document_date", "closing_balance", "period_start", "vendor_name")
-            if gold.get(name)
-        ]
-        hits = sum(1 for name in checked if predicted.get(name) == gold[name])
-        assert hits >= len(checked) - 1, (
-            doc_type,
-            truth.template,
-            checked,
-            {n: (gold[n], predicted.get(n)) for n in checked},
-        )
+        assert result.doc_type == truth.doc_type, truth.template
+        gold, predicted = canonical_fields(truth.fields), result.field_map()
+        present = [name for name in KEY_FIELDS if gold.get(name) is not None]
+        checked += len(present)
+        hits += sum(1 for name in present if predicted.get(name) == gold[name])
+        rows = (len(result.line_items), len(result.transactions))
+        rows_right += rows == (len(truth.line_items), len(truth.transactions))
+    assert len(clean_pages) == 10 and checked >= 50
+    assert hits / checked >= 0.9, (hits, checked)
+    assert rows_right >= 9
 
 
 def test_statement_transactions_are_recovered(pipeline: Pipeline, page_by_type) -> None:
@@ -149,3 +162,39 @@ def test_ocr_text_is_available_for_debugging(pipeline: Pipeline, page_by_type) -
     prepared = preprocess(page)
     ocr = pipeline.engine.recognize(prepared.gray, prepared.ink)
     assert len(ocr.lines) > 10 and "\n" in ocr.text
+
+
+def test_missing_total_is_recovered_from_a_printed_amount_that_satisfies_the_sum() -> None:
+    page = _page(
+        [
+            [("INVOICE", 500)],
+            [("Subtotal", 800), ("2,238.80", 1050)],
+            [("VAT5%", 800), ("111.94", 1050)],
+            [("Tot:d", 800), ("2,350.74", 1050)],
+        ]
+    )
+    extraction = extract(page, build_rows(page))
+    assert extraction.fields["total"].value == "2350.74"
+    assert extraction.fields["total"].evidence == "printed amount matching the sum"
+    unrelated = _page(
+        [
+            [("INVOICE", 500)],
+            [("Subtotal", 800), ("2,238.80", 1050)],
+            [("VAT5%", 800), ("111.94", 1050)],
+            [("Tot:d", 800), ("9,999.99", 1050)],
+        ]
+    )
+    assert "total" not in extract(unrelated, build_rows(unrelated)).fields
+
+
+def test_quantity_survives_a_misread_qty_header() -> None:
+    page = _page(
+        [
+            [("INVOICE", 500)],
+            [("Particulars", 80), ("Uty", 720), ("Rate", 900), ("Amount", 1100)],
+            [("Office", 80), ("chair", 160), ("7", 750), ("166.48", 900), ("1,165.36", 1100)],
+            [("Subtotal", 800), ("1,165.36", 1100)],
+        ]
+    )
+    items = extract(page, build_rows(page)).line_items
+    assert len(items) == 1 and items[0].description == "Office chair" and items[0].quantity == 7

@@ -23,6 +23,7 @@ def _cmd_generate(args: argparse.Namespace) -> int:
 def _cmd_extract(args: argparse.Namespace) -> int:
     from ledgerlens.api.app import build_reviewer
     from ledgerlens.config import get_settings
+    from ledgerlens.pipeline.calibration import FieldCalibrator
     from ledgerlens.pipeline.ocr.factory import get_engine
     from ledgerlens.pipeline.run import Pipeline
 
@@ -31,6 +32,7 @@ def _cmd_extract(args: argparse.Namespace) -> int:
         get_engine(args.engine or settings.ocr_engine, str(settings.atlas_dir)),
         settings.threshold,
         build_reviewer(settings),
+        FieldCalibrator.load(settings.calibration_path),
     )
     result = pipeline.process(Image.open(args.image).convert("RGB"))
     if args.json:

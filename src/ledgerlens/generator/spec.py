@@ -32,7 +32,6 @@ class RenderSpec:
     number_style: str
     currency_style: str
     currency: str
-    currency_note: bool
 
     def font(self, scale: float = 1.0, bold: bool = False) -> ImageFont.FreeTypeFont:
         return family_font(self.family, max(10, round(self.body_size * scale)), bold)
@@ -79,7 +78,6 @@ def choose_spec(
         number_style=rng.choice(NUMBER_STYLES[content.country]),
         currency_style=rng.choice(currency_styles),
         currency=currency,
-        currency_note=rng.random() < 0.6,
     )
 
 

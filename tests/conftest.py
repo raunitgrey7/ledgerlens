@@ -71,6 +71,7 @@ def make_settings(tmp_path: Path, **overrides: object) -> Settings:
         "llm_model": "claude-opus-5-5",
         "log_level": "WARNING",
         "max_upload_bytes": 20 * 1024 * 1024,
+        "calibration_path": tmp_path / "no-calibration.json",
     }
     base.update(overrides)
     return Settings(**base)  # type: ignore[arg-type]

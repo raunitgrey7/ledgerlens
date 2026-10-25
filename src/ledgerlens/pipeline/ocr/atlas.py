@@ -39,19 +39,23 @@ PHASE_VARIANTS: tuple[float, ...] = (0.0, 0.5)
 VECTOR_BLUR = 0.6
 GEO_WEIGHTS = np.array([0.9, 0.9, 0.35], dtype=np.float32)
 AMBIGUITY_MARGIN = 0.12
-CONDENSE_SIMILARITY = 0.995
+CONDENSE_SIMILARITY = 0.985
 SPLIT_WIDE_RATIO = 1.05
 SPLIT_WEAK_RATIO = 0.7
 SPLIT_WEAK_SCORE = 0.92
 SPLIT_ACCEPT_GAIN = 0.04
 SPLIT_ACCEPT_FLOOR = 0.88
+SPLIT_KEEP_SCORE = 0.95
+SPLIT_MULTI_RATIO = 1.6
+WIDE_LETTERS = frozenset("mw")
+SPLIT_FINE_LIMIT = 8
 SLIVERS = frozenset(".,:;'\"!|`()[]{}1lI")
 LOGIT_LIMIT = 30.0
 RARE_SYMBOLS = frozenset("#%@*+='\"!?$\u00a3\u20ac\u20b9")
 RARE_PENALTY = 0.03
 CURRENCY_SYMBOLS = frozenset("$\u00a3\u20ac\u20b9")
 CURRENCY_PENALTY = 0.07
-ATLAS_VERSION = "7"
+ATLAS_VERSION = "8"
 DIGITS, UPPER, LOWER = set(string.digits), set(string.ascii_uppercase), set(string.ascii_lowercase)
 
 
@@ -304,11 +308,13 @@ class AtlasOCR:
         return float(1.0 / (1.0 + np.exp(-logit)))
 
     def _split_fused(self, glyphs: list[Glyph], line: TextLine) -> list[Glyph]:
-        """Cut blobs that blur or touching serifs fused, where the column profile is thinnest.
+        """Cut blobs that blur or touching serifs fused, at the cut that scores best.
 
         A blob is a split candidate when it is wider than a cap height, or merely wide-ish
-        but poorly matched; the cut is kept only when both halves match better than the whole
-        and the halves are not all thin slivers, which is what a cut through an oval produces.
+        but poorly matched. When the whole blob reads best as a wide letter and is narrower
+        than 1.6 cap heights, the halves must beat it by a margin (a lowercase m must not become
+        r + n); other wide blobs are split on a near tie. Cuts
+        whose halves are all thin slivers, which is what a cut through an oval gives, are refused.
         """
         result: list[Glyph] = []
         for glyph in glyphs:
@@ -319,40 +325,59 @@ class AtlasOCR:
         cap = line.cap_height
         if depth >= 3 or glyph.height < 4 or glyph.width < SPLIT_WEAK_RATIO * cap:
             return [glyph]
-        best = float(self.score_glyphs([glyph], line).max())
-        if glyph.width < SPLIT_WIDE_RATIO * cap and best >= SPLIT_WEAK_SCORE:
+        whole = self.score_glyphs([glyph], line)[0]
+        best = float(whole.max())
+        wide = glyph.width >= SPLIT_WIDE_RATIO * cap
+        if best >= SPLIT_KEEP_SCORE or (not wide and best >= SPLIT_WEAK_SCORE):
             return [glyph]
-        cut = _best_cut(glyph.mask)
-        if cut is None:
+        found = self._best_split(glyph, line)
+        if found is None:
             return [glyph]
-        parts = [p for p in (_sub_glyph(glyph, 0, cut), _sub_glyph(glyph, cut, glyph.width)) if p is not None]
-        if len(parts) != 2:
-            return [glyph]
-        part_scores = self.score_glyphs(parts, line)
-        part_best = float(part_scores.max(axis=1).min())
-        labels = [str(self.block_labels[int(index)]) for index in part_scores.argmax(axis=1)]
+        parts, part_best, labels = found
         if all(label in SLIVERS for label in labels):
             return [glyph]
-        wide = glyph.width >= SPLIT_WIDE_RATIO * cap
-        if part_best < max(best + SPLIT_ACCEPT_GAIN, SPLIT_ACCEPT_FLOOR) and not wide:
-            return [glyph]
-        if part_best < best - 0.02:
+        wide_letter = str(self.block_labels[int(whole.argmax())]) in WIDE_LETTERS
+        lenient = wide and (glyph.width >= SPLIT_MULTI_RATIO * cap or not wide_letter)
+        needed = best - 0.02 if lenient else max(best + SPLIT_ACCEPT_GAIN, SPLIT_ACCEPT_FLOOR)
+        if part_best < needed:
             return [glyph]
         return [piece for part in parts for piece in self._split_one(part, line, depth + 1)]
 
+    def _best_split(self, glyph: Glyph, line: TextLine) -> tuple[list[Glyph], float, list[str]] | None:
+        """Search cut columns in the central band; keep the cut whose weaker half scores best.
 
-def _best_cut(mask: np.ndarray) -> int | None:
-    """Column with the least ink in the central band; None when no clear valley exists."""
-    width = mask.shape[1]
-    lo, hi = int(width * 0.2), int(np.ceil(width * 0.8))
-    if hi - lo < 2:
-        return None
-    profile = mask.sum(axis=0)
-    band = profile[lo:hi]
-    index = int(np.argmin(band))
-    if band[index] > max(2, 0.3 * profile.max()):
-        return None
-    return lo + index
+        The thinnest column is the wrong cut for hollow letters: inside a fused "02" it
+        falls in the middle of the 0. Scoring candidate halves in one batch finds the
+        junction instead. Wide blobs are searched on every second column, then refined
+        around the winner, which halves the cost with the same result on a smooth score.
+        """
+        width = glyph.width
+        lo, hi = max(2, int(width * 0.2)), min(width - 2, int(np.ceil(width * 0.8)))
+        step = 2 if hi - lo > SPLIT_FINE_LIMIT else 1
+        found = self._score_cuts(glyph, line, list(range(lo, hi + 1, step)))
+        if found is not None and step == 2:
+            refined = self._score_cuts(glyph, line, [c for c in (found[0] - 1, found[0] + 1) if lo <= c <= hi])
+            if refined is not None and refined[2] > found[2]:
+                found = refined
+        return None if found is None else (found[1], found[2], found[3])
+
+    def _score_cuts(
+        self, glyph: Glyph, line: TextLine, cuts: list[int]
+    ) -> tuple[int, list[Glyph], float, list[str]] | None:
+        """Best of the given cuts as (cut, halves, weaker half's score, labels of the halves)."""
+        pairs = []
+        for cut in cuts:
+            left, right = _sub_glyph(glyph, 0, cut), _sub_glyph(glyph, cut, glyph.width)
+            if left is not None and right is not None:
+                pairs.append((cut, left, right))
+        if not pairs:
+            return None
+        scores = self.score_glyphs([part for _, left, right in pairs for part in (left, right)], line)
+        weakest = scores.max(axis=1).reshape(-1, 2).min(axis=1)
+        index = int(np.argmax(weakest))
+        labels = [str(self.block_labels[int(i)]) for i in scores[2 * index : 2 * index + 2].argmax(axis=1)]
+        cut, left, right = pairs[index]
+        return cut, [left, right], float(weakest[index]), labels
 
 
 def _sub_glyph(glyph: Glyph, x_from: int, x_to: int) -> Glyph | None:

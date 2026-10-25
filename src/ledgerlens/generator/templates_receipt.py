@@ -62,7 +62,7 @@ def receipt_thermal(canvas: Canvas, content: DocumentContent, spec: RenderSpec, 
     if fields.gstin:
         canvas.text(MARGIN, y, f"GSTIN: {fields.gstin}", body, spec.ink)
         y += step
-    if spec.currency_note and spec.currency_style == "none":
+    if spec.currency_style == "none":
         canvas.text(MARGIN, y, f"Currency: {spec.currency}", body, spec.ink)
         y += step
     canvas.text(PAPER_W / 2, y + step, "Thank you, visit again", body, spec.ink, align="center")
@@ -112,7 +112,7 @@ def receipt_retail(canvas: Canvas, content: DocumentContent, spec: RenderSpec, r
     else:
         canvas.text(MARGIN, y, f"{content.extras['payment']} payment approved", body, spec.ink)
         y += step
-    if spec.currency_note and spec.currency_style == "none":
+    if spec.currency_style == "none":
         canvas.text(MARGIN, y, f"All amounts in {spec.currency}", body, spec.ink)
         y += step
     canvas.text(MARGIN, y + step, f"Served by cashier {content.extras['cashier']}", body, spec.ink)
@@ -155,7 +155,7 @@ def receipt_cafe(canvas: Canvas, content: DocumentContent, spec: RenderSpec, rng
     if fields.gstin:
         canvas.text(MARGIN, y, f"GSTIN {fields.gstin}", body, spec.ink)
         y += step
-    if spec.currency_note and spec.currency_style == "none":
+    if spec.currency_style == "none":
         canvas.text(MARGIN, y, f"Currency: {spec.currency}", body, spec.ink)
         y += step
     canvas.text(PAPER_W / 2, y + step, "See you soon", body, spec.ink, align="center")

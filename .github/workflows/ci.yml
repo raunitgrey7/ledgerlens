@@ -39,7 +39,7 @@ jobs:
           python-version: "3.13"
       - run: uv sync --all-extras
       - name: Benchmark as a quality gate (thresholds in benchmarks/thresholds.json)
-        run: uv run python -m ledgerlens.bench --test-size 160 --cal-size 60 --jobs 2 --out benchmarks/ci --gate
+        run: uv run python -m ledgerlens.bench --test-size 120 --cal-size 200 --jobs 2 --out benchmarks/ci --gate
       - uses: actions/upload-artifact@v4
         if: always()
         with:

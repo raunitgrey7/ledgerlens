@@ -21,6 +21,7 @@ from ledgerlens.api.metrics import Metrics
 from ledgerlens.api.routes import router
 from ledgerlens.api.storage import Storage
 from ledgerlens.config import Settings, get_settings
+from ledgerlens.pipeline.calibration import FieldCalibrator
 from ledgerlens.pipeline.ocr.base import OCREngine
 from ledgerlens.pipeline.ocr.factory import get_engine
 from ledgerlens.pipeline.run import Pipeline, Reviewer
@@ -42,7 +43,10 @@ def create_app(
     )
     app.state.settings = settings
     app.state.pipeline = Pipeline(
-        engine or get_engine(settings.ocr_engine, str(settings.atlas_dir)), settings.threshold, build_reviewer(settings)
+        engine or get_engine(settings.ocr_engine, str(settings.atlas_dir)),
+        settings.threshold,
+        build_reviewer(settings),
+        FieldCalibrator.load(settings.calibration_path),
     )
     app.state.storage = storage or Storage(settings.db_path)
     app.state.metrics = Metrics()

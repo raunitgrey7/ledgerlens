@@ -1,4 +1,4 @@
-from ledgerlens.pipeline.confidence import apply_rules, decide, document_confidence
+from ledgerlens.pipeline.confidence import apply_rules, decide, document_confidence, missing_fields
 from ledgerlens.schemas import Decision, DocType, ExtractedField, RuleResult
 
 
@@ -18,14 +18,26 @@ def test_passed_rules_relieve_doubt_and_failed_rules_halve() -> None:
     assert fields["total"].confidence == 0.8
 
 
-def test_document_confidence_penalises_missing_required_fields() -> None:
-    full = _fields(vendor_name=1.0, document_number=1.0, document_date=1.0, subtotal=1.0, tax=1.0, total=1.0)
+def test_document_confidence_penalises_missing_and_flagged_fields() -> None:
+    full = _fields(
+        vendor_name=1.0,
+        customer_name=1.0,
+        document_number=1.0,
+        document_date=1.0,
+        due_date=1.0,
+        currency=1.0,
+        subtotal=1.0,
+        tax=1.0,
+        total=1.0,
+    )
     assert document_confidence(DocType.INVOICE, full, 0.9) == 1.0
     missing = dict(full)
     del missing["tax"]
-    assert document_confidence(DocType.INVOICE, missing, 0.9) == 0.35
+    assert document_confidence(DocType.INVOICE, missing, 0.9) == 0.2
     extra = dict(full, iban=ExtractedField(name="iban", value="x", confidence=0.5))
     assert document_confidence(DocType.INVOICE, extra, 0.9) == 0.5
+    assert document_confidence(DocType.INVOICE, full, 0.9, flagged=["gstin"]) == 0.2
+    assert missing_fields(DocType.INVOICE, missing, ["gstin"]) == ["tax", "gstin"]
 
 
 def test_decision_requires_threshold_and_no_hard_failure() -> None:

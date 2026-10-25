@@ -20,6 +20,8 @@ from ledgerlens.canonical import canonical_description
 from ledgerlens.pipeline.ocr.base import OCRWord
 from ledgerlens.schemas import LineItem, Transaction, WordBox
 
+RELAXED_SIMILARITY = 0.8
+
 
 @dataclass
 class Counts:
@@ -113,6 +115,44 @@ def match_transactions(gold: list[Transaction], pred: list[Transaction]) -> Coun
     return match_rows([_transaction_key(r) for r in gold], [_transaction_key(r) for r in pred])
 
 
+def match_rows_relaxed(gold: list[tuple[str, tuple[str, ...]]], pred: list[tuple[str, tuple[str, ...]]]) -> Counts:
+    """Rows match when every numeric key is exact and the descriptions are at least RELAXED_SIMILARITY alike.
+
+    Each row is (description, numeric keys). Gold rows are matched greedily, in order,
+    to the most similar unclaimed prediction with identical numeric keys.
+    """
+    claimed: set[int] = set()
+    matched = 0
+    for description, keys in gold:
+        best, best_score = None, RELAXED_SIMILARITY
+        for index, (other, other_keys) in enumerate(pred):
+            if index in claimed or other_keys != keys:
+                continue
+            score = difflib.SequenceMatcher(a=description, b=other, autojunk=False).ratio()
+            if score >= best_score:
+                best, best_score = index, score
+        if best is not None:
+            claimed.add(best)
+            matched += 1
+    return Counts(tp=matched, fp=len(pred) - matched, fn=len(gold) - matched)
+
+
+def match_line_items_relaxed(gold: list[LineItem], pred: list[LineItem]) -> Counts:
+    def row(item: LineItem) -> tuple[str, tuple[str, ...]]:
+        key = _item_key(item)
+        return key[0], key[1:]
+
+    return match_rows_relaxed([row(i) for i in gold], [row(i) for i in pred])
+
+
+def match_transactions_relaxed(gold: list[Transaction], pred: list[Transaction]) -> Counts:
+    def row(transaction: Transaction) -> tuple[str, tuple[str, ...]]:
+        key = _transaction_key(transaction)
+        return key[1], (key[0], *key[2:])
+
+    return match_rows_relaxed([row(r) for r in gold], [row(r) for r in pred])
+
+
 def edit_distance(a: str, b: str) -> int:
     """Levenshtein distance via difflib opcodes (adequate for line-length strings)."""
     matcher = difflib.SequenceMatcher(a=a, b=b, autojunk=False)
@@ -177,6 +217,13 @@ class DocScore:
     cer_errors: int
     cer_chars: int
     predicted_fields: dict[str, str | None] = field(default_factory=dict)
+    field_confidences: dict[str, float] = field(default_factory=dict)
+    predicted_type: str = ""
+    doc_type_confidence: float = 0.0
+    missing_fields: list[str] = field(default_factory=list)
+    hard_rule_failed: bool = False
+    items_relaxed: Counts = field(default_factory=Counts)
+    transactions_relaxed: Counts = field(default_factory=Counts)
 
     @property
     def header_correct(self) -> bool:
@@ -213,9 +260,14 @@ def latency_summary(values: list[float]) -> dict[str, float]:
     }
 
 
+def accepted_at(score: DocScore, threshold: float) -> bool:
+    """The pipeline's decision rule replayed at any threshold: confident enough and no hard rule failed."""
+    return not score.hard_rule_failed and score.confidence >= threshold
+
+
 def acceptance_summary(scores: list[DocScore], threshold: float) -> dict[str, float | int]:
     """Automation rate and the accuracy of what was automated at a threshold."""
-    accepted = [s for s in scores if s.accepted and s.confidence >= threshold]
+    accepted = [s for s in scores if accepted_at(s, threshold)]
     total = len(scores)
     correct = sum(1 for s in accepted if s.record_correct)
     return {
@@ -227,6 +279,7 @@ def acceptance_summary(scores: list[DocScore], threshold: float) -> dict[str, fl
         if accepted
         else 0.0,
         "wrong_accepted": len(accepted) - correct,
+        "wrong_header_accepted": sum(1 for score in accepted if not score.header_correct),
         "review_rate": round(1 - len(accepted) / total, 4) if total else 0.0,
     }
 
@@ -236,7 +289,7 @@ def effort_summary(scores: list[DocScore], threshold: float, model: EffortModel)
     manual = sum(s.gold_field_count for s in scores) * model.manual
     cost = 0.0
     for score in scores:
-        if score.accepted and score.confidence >= threshold:
+        if accepted_at(score, threshold):
             continue
         wrong = score.wrong_field_count
         cost += wrong * model.correct + (score.gold_field_count - min(wrong, score.gold_field_count)) * model.verify
@@ -248,17 +301,28 @@ def effort_summary(scores: list[DocScore], threshold: float, model: EffortModel)
     }
 
 
-def choose_threshold(scores: list[DocScore], target_accuracy: float, grid_step: float = 0.01) -> float:
-    """Lowest threshold whose accepted-record accuracy on the calibration split meets the target.
+def choose_threshold(
+    scores: list[DocScore],
+    target_accuracy: float,
+    criterion: str = "accepted_header_accuracy",
+    grid_step: float = 0.01,
+    min_accepted: int = 5,
+) -> float:
+    """Lowest threshold, sweeping down from 1.0, before the accuracy of accepted documents drops below target.
 
+    ``criterion`` names the acceptance_summary key that must meet the target: header
+    accuracy by default (every header field exact), or full-record accuracy. Thresholds
+    that accept fewer than ``min_accepted`` documents are skipped rather than allowed to
+    end the sweep, so one unlucky document at the very top cannot decide the outcome.
     Returns 1.0 (accept nothing) when no threshold reaches the target.
     """
     best = 1.0
     for step in range(int(1 / grid_step), -1, -1):
         threshold = round(step * grid_step, 2)
         summary = acceptance_summary(scores, threshold)
-        if summary["accepted"] and summary["accepted_record_accuracy"] >= target_accuracy:
-            best = threshold
-        elif summary["accepted"]:
+        if int(summary["accepted"]) < min_accepted:
+            continue
+        if summary[criterion] < target_accuracy:
             break
+        best = threshold
     return best

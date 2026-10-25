@@ -163,6 +163,7 @@ class ExtractionResult(BaseModel):
     transactions: list[Transaction] = Field(default_factory=list)
     rules: list[RuleResult] = Field(default_factory=list)
     document_confidence: float
+    missing_fields: list[str] = Field(default_factory=list)
     decision: Decision
     ocr_engine: str
     skew_deg: float = 0.0

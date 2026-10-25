@@ -21,13 +21,13 @@ RIGHT = PAGE_W - MARGIN
 
 
 def _identifier_lines(content: DocumentContent, spec: RenderSpec) -> list[str]:
-    """Footer identifiers (GSTIN, IBAN) and, on some documents, an explicit currency note."""
+    """Footer identifiers (GSTIN, IBAN) and a currency line whenever the amounts carry no symbol or code."""
     lines: list[str] = []
     if content.fields.gstin:
         lines.append(f"GSTIN: {content.fields.gstin}")
     if content.fields.iban:
         lines.append(f"IBAN: {format_iban(content.fields.iban)}")
-    if spec.currency_note and spec.currency_style == "none":
+    if spec.currency_style == "none":
         lines.append(f"All amounts in {spec.currency}")
     return lines
 
@@ -264,6 +264,8 @@ def invoice_tax(canvas: Canvas, content: DocumentContent, spec: RenderSpec, rng:
     footer = [f"Payment terms: {content.extras['terms']}"]
     if fields.iban:
         footer.append(f"IBAN: {format_iban(fields.iban)}")
+    if spec.currency_style == "none":
+        footer.append(f"All amounts in {spec.currency}")
     canvas.lines(MARGIN, y + 50, footer, body, spec.leading, spec.ink)
     canvas.text(RIGHT, PAGE_H - 120, f"For {fields.vendor_name}", body, spec.ink, align="right")
     canvas.text(RIGHT, PAGE_H - 120 + spec.leading, "Authorised Signatory", body, spec.ink, align="right")

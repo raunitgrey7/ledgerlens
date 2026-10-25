@@ -21,6 +21,7 @@ class Settings:
     llm_model: str
     log_level: str
     max_upload_bytes: int
+    calibration_path: Path
 
     @property
     def atlas_dir(self) -> Path:
@@ -56,4 +57,5 @@ def get_settings() -> Settings:
         llm_model=os.environ.get("LEDGERLENS_LLM_MODEL", "claude-haiku-5-5"),
         log_level=os.environ.get("LEDGERLENS_LOG_LEVEL", "INFO"),
         max_upload_bytes=int(os.environ.get("LEDGERLENS_MAX_UPLOAD_BYTES", str(20 * 1024 * 1024))),
+        calibration_path=Path(os.environ.get("LEDGERLENS_CALIBRATION_FILE", "benchmarks/calibration.json")),
     )

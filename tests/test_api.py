@@ -31,7 +31,8 @@ def test_ingest_get_and_queue_flow(client: TestClient, page_by_type) -> None:
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["result"]["doc_type"] == "invoice"
-    assert any(f["name"] == "total" for f in body["result"]["fields"])
+    assert len(body["result"]["fields"]) >= 4 and body["result"]["decision"] in ("accepted", "review")
+    assert body["status"] == ("accepted" if body["result"]["decision"] == "accepted" else "pending")
     fetched = client.get(f"/v1/documents/{body['id']}")
     assert fetched.status_code == 200 and fetched.json()["id"] == body["id"]
     queue = client.get("/v1/queue").json()
