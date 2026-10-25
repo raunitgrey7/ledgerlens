@@ -1,6 +1,6 @@
 # Benchmark results
 
-Generated 2026-10-25T04:30:41+00:00 with engine `atlas` on macOS-26.5.1-arm64-arm-64bit-Mach-O.
+Generated 2026-10-25T04:52:53+00:00 with engine `atlas` on macOS-26.5.1-arm64-arm-64bit-Mach-O.
 
 | Metric | Value |
 |---|---|
@@ -17,7 +17,7 @@ Generated 2026-10-25T04:30:41+00:00 with engine `atlas` on macOS-26.5.1-arm64-ar
 | Accepted documents with every header field exact | 0.0% |
 | Accepted documents also exact on every line item and transaction | 0.0% |
 | Human effort saved (cost model in docs/EVALUATION.md) | 41.5% |
-| Latency per page, mean / p50 / p95 (ms) | 1522.2 / 1119.7 / 3766.8 |
+| Latency per page, mean / p50 / p95 (ms) | 1807.2 / 1386.7 / 4337.8 |
 
 ### Per field
 

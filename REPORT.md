@@ -68,7 +68,7 @@ uv run ruff format --check src tests
 uv run pytest -q
 ........................................................................ [ 62%]
 ............................................                             [100%]
-116 passed in 28.63s
+116 passed in 34.24s
 ```
 
 The 116 tests cover unit behaviour of every module, property-based round trips
@@ -82,8 +82,11 @@ block differs from `benchmarks/results.json`.
 
 ### make bench (clean shell): the published run
 
-Run at commit fba3201 (recorded in `benchmarks/results.json`), 200 calibration pages
-(seed 101) and 400 test pages (seed 303), four worker processes, 283 s.
+Run at commit 2edcfea (recorded in `benchmarks/results.json`), 200 calibration pages
+(seed 101) and 400 test pages (seed 303), four worker processes, 321 s. An earlier run
+of the same command at commit fba3201 produced identical accuracy figures and a latency
+of 1522.2 / 1119.7 / 3766.8 ms (mean / p50 / p95); latency varies with machine load,
+since other builds were running on this machine.
 
 ```
 uv run python -m ledgerlens.bench --jobs 4
@@ -102,8 +105,8 @@ uv run python -m ledgerlens.bench --jobs 4
 | Accepted documents with every header field exact | 0.0% |
 | Accepted documents also exact on every line item and transaction | 0.0% |
 | Human effort saved (cost model in docs/EVALUATION.md) | 41.5% |
-| Latency per page, mean / p50 / p95 (ms) | 1522.2 / 1119.7 / 3766.8 |
-wrote benchmarks/results.json (283s)
+| Latency per page, mean / p50 / p95 (ms) | 1807.2 / 1386.7 / 4337.8 |
+wrote benchmarks/results.json (321s)
 uv run python -m ledgerlens.bench.readme
 updated README.md from benchmarks/results.json
 ```
@@ -138,7 +141,7 @@ document confidence 0.861 and "URBAN GROCER" read as "URBAN GROEER" at 0.842. Th
 calibration and the threshold were fitted on the calibration split only; the test-split
 curve is reported, not used.
 
-### CI configuration with the gate (the command CI runs, with more workers)
+### CI configuration with the gate (the command CI runs, with more workers), at commit fba3201
 
 ```
 uv run python -m ledgerlens.bench --test-size 120 --cal-size 200 --jobs 4 --data <scratch> --out <scratch> --gate
@@ -172,19 +175,21 @@ equal apart from latency and run metadata, `calibration.json` files identical.
 
 ### Docker
 
-`docker build -t ledgerlens:latest .` succeeded in 33 s (layers cached), image size
-621 MB. Smoke test: `docker run -p 18080:8000 ledgerlens:latest`, `GET /health` returned
+At commit 2edcfea, `docker build -t ledgerlens:latest .` succeeded in 35 s (layers
+cached), image size 621 MB. Smoke test: `docker run -p 18080:8000 ledgerlens:latest`,
+`GET /health` returned
 `{"status":"ok","version":"0.1.0","ocr_engine":"atlas","threshold":1.0}`, uploading
 `data/synthetic/test/test-00001.png` to `POST /v1/documents` returned an invoice routed
-to review with 9 fields and a pipeline latency of 2092.7 ms inside the container, the
-process ran as user `app` (uid 10001), and the image's atlas fingerprint matched the
-host's.
+to review with 9 fields and a pipeline latency of 2042.1 ms inside the container, and
+the process ran as user `app` (uid 10001). An earlier build at fba3201 also confirmed
+that the image's atlas fingerprint matches the host's.
 
 ### make serve
 
-Clean-shell `make serve PORT=18081`: `GET /health` returned status ok with threshold
-1.0, `GET /` returned the dashboard (HTTP 200, 7,260 bytes), `GET /v1/queue` returned an
-empty queue, and every request produced a JSON log line with a request id.
+At commit 2edcfea, clean-shell `make serve PORT=18081`: `GET /health` returned status
+ok with threshold 1.0 and `GET /` returned the dashboard (HTTP 200, 7,260 bytes). An
+earlier check also showed `GET /v1/queue` returning an empty queue and a JSON log line
+with a request id for every request.
 
 ## How the result got here
 
@@ -229,6 +234,7 @@ calibration pages. The acceptance target was not changed after seeing test resul
   locally through the same commands. Font rasterisation on Linux may differ slightly
   from macOS; the gate limits leave a margin for that, but this was not measured.
 - **LLM reviewer not run against the API.** It is tested with a fake client only.
-- **Latency.** 1.5 s mean and 3.8 s p95 per page on this machine; heavy pages are the
-  slow ones. CI runner latency was not measured.
+- **Latency.** 1.8 s mean and 4.3 s p95 per page in the published run (1.5 s and 3.8 s
+  in an earlier run of the same command); heavy pages are the slow ones. CI runner
+  latency was not measured.
 - **Synthetic data only.** No public scanned dataset was evaluated.

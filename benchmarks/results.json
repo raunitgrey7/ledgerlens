@@ -1,8 +1,8 @@
 {
   "meta": {
-    "generated_at": "2026-10-25T04:30:41+00:00",
+    "generated_at": "2026-10-25T04:52:53+00:00",
     "ledgerlens_version": "0.1.0",
-    "git_commit": "fba3201",
+    "git_commit": "2edcfea",
     "python": "3.13.17",
     "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
     "machine": "arm64",
@@ -22,7 +22,7 @@
     },
     "seconds": {
       "build_data": 0.1,
-      "evaluate": 282.8
+      "evaluate": 321.2
     }
   },
   "field_calibration": {
@@ -496,10 +496,10 @@
       "manual_cost_per_field": 1.0
     },
     "latency_ms": {
-      "mean": 1511.2,
-      "p50": 1159.1,
-      "p95": 3837.4,
-      "max": 5491.4
+      "mean": 1613.4,
+      "p50": 1250.1,
+      "p95": 3790.6,
+      "max": 6169.1
     }
   },
   "test": {
@@ -926,10 +926,10 @@
       "manual_cost_per_field": 1.0
     },
     "latency_ms": {
-      "mean": 1522.2,
-      "p50": 1119.7,
-      "p95": 3766.8,
-      "max": 6981.8
+      "mean": 1807.2,
+      "p50": 1386.7,
+      "p95": 4337.8,
+      "max": 7472.4
     }
   }
 }

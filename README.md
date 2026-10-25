@@ -59,8 +59,8 @@ flowchart LR
 ```
 cd ~/forge/ledgerlens
 make setup        # uv sync and build the OCR glyph atlas (25 s from a fresh clone here)
-make test         # 116 tests (30 s here)
-make bench        # generate 600 pages, score them, write benchmarks/ and the table below (283 s here)
+make test         # 116 tests (35 s here)
+make bench        # generate 600 pages, score them, write benchmarks/ and the table below (321 s here)
 make serve        # API and dashboard on http://localhost:8000 (PORT=8001 make serve to move it)
 ```
 
@@ -76,7 +76,7 @@ Or from the command line without the server: `uv run ledgerlens extract data/syn
 ## Measured results
 
 <!-- results:start -->
-Measured on 2026-10-25T04:30:41+00:00 (commit fba3201, macOS-26.5.1-arm64-arm-64bit-Mach-O, arm64, Python 3.13.17), test split of 400 pages, calibration split of 200 pages, OCR engine `atlas`.
+Measured on 2026-10-25T04:52:53+00:00 (commit 2edcfea, macOS-26.5.1-arm64-arm-64bit-Mach-O, arm64, Python 3.13.17), test split of 400 pages, calibration split of 200 pages, OCR engine `atlas`.
 
 | Metric | Value |
 |---|---|
@@ -93,7 +93,7 @@ Measured on 2026-10-25T04:30:41+00:00 (commit fba3201, macOS-26.5.1-arm64-arm-64
 | Accepted documents with every header field exact | 0.0% |
 | Accepted documents also exact on every line item and transaction | 0.0% |
 | Human effort saved (cost model in docs/EVALUATION.md) | 41.5% |
-| Latency per page, mean / p50 / p95 (ms) | 1522.2 / 1119.7 / 3766.8 |
+| Latency per page, mean / p50 / p95 (ms) | 1807.2 / 1386.7 / 4337.8 |
 
 ### Per field
 
@@ -248,8 +248,9 @@ Multi-stage build, non-root user, atlas prebuilt into the image.
   threshold met the 95% acceptance bar on the calibration split.
 - Exact line-item matching is strict: one misread character in a description fails
   the row (31.5% exact F1, 49.8% with relaxed descriptions).
-- Latency is 1.5 s per page on average on an Apple Silicon laptop core, 3.8 s at the
-  95th percentile; heavy pages cost most because fused glyphs trigger the cut search.
+- Latency is 1.8 s per page on average on an Apple Silicon laptop core, 4.3 s at the
+  95th percentile, and it varies with machine load (an earlier run of the same
+  command measured 1.5 s and 3.8 s); heavy pages cost most because fused glyphs trigger the cut search.
 - Receipts with tax included in prices, multi-page documents, handwriting, wrapped
   table descriptions and discounts are not generated and not handled.
 - Document confidence multiplies field probabilities as if their errors were
